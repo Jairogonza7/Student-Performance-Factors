@@ -100,7 +100,7 @@ delete_na <- function(data){
 }
 ```
 
-Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor.
+Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor..
 
 ```{r}
 convert_to_ordered_int <- function(df, column_names, levels_order, ordered=TRUE){
