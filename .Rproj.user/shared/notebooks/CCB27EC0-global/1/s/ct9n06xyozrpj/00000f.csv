@@ -1,0 +1,3 @@
+"0","delete_na <- function(data){"
+"0","  data[rowSums(is.na(data)) <= 0,]"
+"0","}"

@@ -1,0 +1,6 @@
+"0","convert_to_ordered_int <- function(df, column_names, levels_order, ordered=TRUE){"
+"0","  for (col in column_names){"
+"0","  df[[col]] <-  as.integer(factor(df[[col]], levels = levels_order, ordered = ordered))"
+"0","  }"
+"0","  return(df)"
+"0","}"
