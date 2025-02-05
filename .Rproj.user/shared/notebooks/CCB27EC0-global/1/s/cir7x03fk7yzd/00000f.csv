@@ -1,7 +1,6 @@
 "0","clean_and_filter_data <- function(data) {"
 "0","  data <- data %>%"
 "0","    distinct() %>%"
-"0","    delete_na() %>%"
 "0","    convert_to_ordered_int(c(""Parental_Involvement"",""Access_to_Resources"",""Motivation_Level"","
 "0","                              ""Family_Income"",""Teacher_Quality""),"
 "0","                           c(""Low"", ""Medium"", ""High"")) %>%"

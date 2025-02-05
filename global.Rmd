@@ -19,7 +19,7 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages <- c("tidyverse")
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra")
 ipak(packages)
 ```
 
@@ -90,17 +90,42 @@ A continuación, se describen algunos de estos atributos:
 
 ## Preprocesamiento de los datos
 
-### Functions
-
-Esta función elimina las filas con valores perdidos. En nuestro conjunto de datos, esto es innecesario porque no existen valores perdidos.
+Esta función muestra las filas con valores NA o valores vacios("").
 
 ```{r}
-delete_na <- function(data){
-  data[rowSums(is.na(data)) <= 0,]
+detect_missing_data <- function(df) {
+  na_count <- colSums(is.na(df))  # Contar los NA en cada columna
+  empty_count <- colSums(sapply(df, function(x) x == ""))  # Contar los valores vacíos en cada columna
+  
+  missing_data <- data.frame(NA_Count = na_count, Empty_Count = empty_count)
+  missing_data <- missing_data[missing_data$NA_Count > 0 | missing_data$Empty_Count > 0, ]
+  
+  return(missing_data)
 }
+
+
+missing_data <- detect_missing_data(data)
+missing_data
+```
+Como podemos observar, nuestro dataframe no consta de valores NA pero sí de filas con valores vacios.
+
+Esta función elimina todas aquellas filas detectadas con la función anterior. En nuestro caso, tendriamos que eliminar 235 filas lo que equivale a un 3.56% del total de filas.
+
+
+```{r}
+clean_missing_data <- function(df) {
+  df_cleaned <- df[!apply(df, 1, function(x) any(is.na(x) | x == "")), ]
+
+  return(df_cleaned)
+}
+data <- clean_missing_data(data)
+
+missing_data <- detect_missing_data(data)
+missing_data
 ```
 
-Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor.
+
+Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor..
 
 ```{r}
 convert_to_ordered_int <- function(df, column_names, levels_order, ordered=TRUE){
@@ -136,7 +161,6 @@ convert_to_factor <- function(df, column_names, levels) {
 clean_and_filter_data <- function(data) {
   data <- data %>%
     distinct() %>%
-    delete_na() %>%
     convert_to_ordered_int(c("Parental_Involvement","Access_to_Resources","Motivation_Level",
                               "Family_Income","Teacher_Quality"),
                            c("Low", "Medium", "High")) %>%
@@ -157,11 +181,95 @@ df_cleaned <- clean_and_filter_data(data)
 ```{r}
 df_cleaned
 ```
+## Distribution of Numerical Columns
+
+```{r}
+ggplot(df_cleaned, aes(x = Hours_Studied)) +
+  geom_histogram(binwidth = 1, 
+                 fill = "cornflowerblue", color = "black", bins = 20) +
+  labs(title = "Studied Hours analysis", x = "Hours Studied", y = "Count") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(df_cleaned, aes(x = Sleep_Hours)) +
+  geom_histogram(binwidth = 1, 
+                 fill = "cornflowerblue", color = "black", bins = 20) +
+  labs(title = "Sleep Hours Analysis", x = "Sleep Hours", y = "Count") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(df_cleaned, aes(x = Tutoring_Sessions)) +
+  geom_histogram(binwidth = 1, 
+                 fill = "cornflowerblue", color = "black", bins = 20) +
+  labs(title = "Tutoring Sessions Analysis", x = "Tutoring Sessions", y = "Count") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(df_cleaned, aes(x = Attendance)) +
+  geom_histogram(binwidth = 5, 
+                 fill = "cornflowerblue", color = "black", bins = 20) +
+  labs(title = "Attendance Analysis", x = "Attendance(%)", y = "Count") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(data, aes(x = Previous_Scores)) +
+  geom_histogram(binwidth = 1, fill = "orange", color = "black") +
+  labs(title = "Distribution of Previous Scores", x = "Previous Scores", y = "Count")
+
+ggplot(data, aes(x = Exam_Score)) +
+  geom_histogram(binwidth = 1, fill = "cornflowerblue", color = "black") +
+  labs(title = "Distribution of Exam Scores", x = "Exam Score", y = "Count")
+```
+
+## Distribution of Categorical Columns
 
 
+```{r}
+create_pie_chart <- function(df, var_name) {
+  if (!(var_name %in% colnames(df))) {
+    stop("La variable no existe en el dataframe.")
+  }
+  
+  dist_var <- as.data.frame(table(df[[var_name]]))
+  colnames(dist_var) <- c(var_name, "Count")
+  dist_var$Percentage <- round(dist_var$Count / sum(dist_var$Count) * 100, 1)
+  
+
+  ggplot(dist_var, aes(x = "", y = Count, fill = get(var_name))) +
+    geom_bar(stat = "identity", width = 1) +
+    coord_polar(theta = "y") +
+    geom_text(aes(label = paste0(Percentage, "%")), position = position_stack(vjust = 0.5), size = 5) +
+    labs(title = paste("Distribución de", var_name), fill=var_name) +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(), 
+          axis.ticks = element_blank(),
+          panel.grid = element_blank())
+}
+```
+
+```{r}
+create_pie_chart(data, "Parental_Involvement")
+create_pie_chart(data, "Access_to_Resources")
+create_pie_chart(data, "Parental_Education_Level")
+create_pie_chart(data, "Distance_from_Home")
+create_pie_chart(data, "Extracurricular_Activities")
+create_pie_chart(data, "School_Type")
+create_pie_chart(data, "Gender")
+```
+
+## Posibles preguntas generales
+
+### ¿Cuales son los factores que más correlacionados se encuentran?
+### ¿Se pueden agrupar a los estudiantes en una clase según sus características?
+Esto podria servir para dividir una clase en grupos de modo que los estudiantes que sean más parecidos entre sí se sienten cerca o incluso que vayan al mismo grupo.
 
 
+### ¿Como explicarias los niveles de motivación baja de un alumno? 
+### ¿Cuales son las horas de trabajo personal que tiene que realizar un estudiante para que pueda obtener una alta calificación?
+### ¿Existen variables que impliquen el cumplimiento de otras?
 
+### Jairo => 
+### Pedro =>
 
 
 
