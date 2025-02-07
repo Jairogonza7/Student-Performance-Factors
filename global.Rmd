@@ -19,7 +19,7 @@ En particular, el estudio se enfoca en responder dos preguntas fundamentales:
     Este enfoque permitirá una distribución estratégica que potencie el aprendizaje al ubicar a los estudiantes en entornos que favorezcan su desarrollo académico y personal.
 
 2.  **¿Cuántas horas de trabajo personal necesita un estudiante para obtener una alta calificación?**\
-    Otro objetivo del estudio es determinar cuántas horas diarias de estudio autónomo son necesarias para que un estudiante alcance una calificación alta (entre 8 y 10). Para ello, se analizarán factores como las horas de estudio semanal, el tiempo de sueño diario y la cantidad de sesiones de tutoría recibidas, ya que estos aspectos pueden influir en el rendimiento académico. A través de un modelo de regresión, se buscará cuantificar la relación entre estas variables y el desempeño estudiantil, proporcionando una guía para optimizar los hábitos de estudio.
+    Otro objetivo del estudio es determinar cuántas horas diarias de estudio autónomo son necesarias para que un estudiante alcance una calificación alta (entre 8 y 10). Para ello, se identificarán aquellos factores que tengan mayor influencia con la calificación del estudiante, ya que estos aspectos pueden influir en el rendimiento académico. A través de un modelo de regresión, se buscará cuantificar la relación entre estas variables y el desempeño estudiantil, proporcionando una guía para optimizar los hábitos de estudio.
 
 A través de este análisis, se pretende aportar información valiosa para mejorar las estrategias educativas, optimizar la distribución de los estudiantes en el aula y ofrecer recomendaciones que permitan a los alumnos maximizar su rendimiento académico.
 
@@ -129,83 +129,6 @@ A continuación, se describen algunos de estos atributos:
 
 -   **Exam_Score**: Calificación del examen final.
 
-## Visualizaciones Iniciales
-
-## Distribución de variables numéricas
-
-```{r}
-ggplot(df_cleaned, aes(x = Hours_Studied)) +
-  geom_histogram(binwidth = 1, 
-                 fill = "cornflowerblue", color = "black", bins = 20) +
-  labs(title = "Studied Hours analysis", x = "Hours Studied", y = "Count") +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-ggplot(df_cleaned, aes(x = Sleep_Hours)) +
-  geom_histogram(binwidth = 1, 
-                 fill = "cornflowerblue", color = "black", bins = 20) +
-  labs(title = "Sleep Hours Analysis", x = "Sleep Hours", y = "Count") +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-ggplot(df_cleaned, aes(x = Tutoring_Sessions)) +
-  geom_histogram(binwidth = 1, 
-                 fill = "cornflowerblue", color = "black", bins = 20) +
-  labs(title = "Tutoring Sessions Analysis", x = "Tutoring Sessions", y = "Count") +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-ggplot(df_cleaned, aes(x = Attendance)) +
-  geom_histogram(binwidth = 5, 
-                 fill = "cornflowerblue", color = "black", bins = 20) +
-  labs(title = "Attendance Analysis", x = "Attendance(%)", y = "Count") +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-ggplot(data, aes(x = Previous_Scores)) +
-  geom_histogram(binwidth = 1, fill = "orange", color = "black") +
-  labs(title = "Distribution of Previous Scores", x = "Previous Scores", y = "Count")
-
-ggplot(data, aes(x = Exam_Score)) +
-  geom_histogram(binwidth = 1, fill = "cornflowerblue", color = "black") +
-  labs(title = "Distribution of Exam Scores", x = "Exam Score", y = "Count")
-```
-
-## Distribución de variables categóricas
-
-```{r}
-create_pie_chart <- function(df, var_name) {
-  if (!(var_name %in% colnames(df))) {
-    stop("La variable no existe en el dataframe.")
-  }
-  
-  dist_var <- as.data.frame(table(df[[var_name]]))
-  colnames(dist_var) <- c(var_name, "Count")
-  dist_var$Percentage <- round(dist_var$Count / sum(dist_var$Count) * 100, 1)
-  
-
-  ggplot(dist_var, aes(x = "", y = Count, fill = get(var_name))) +
-    geom_bar(stat = "identity", width = 1) +
-    coord_polar(theta = "y") +
-    geom_text(aes(label = paste0(Percentage, "%")), position = position_stack(vjust = 0.5), size = 5) +
-    labs(title = paste("Distribución de", var_name), fill=var_name) +
-    theme_minimal() +
-    theme(axis.text.x = element_blank(), 
-          axis.ticks = element_blank(),
-          panel.grid = element_blank())
-}
-```
-
-```{r}
-create_pie_chart(data, "Parental_Involvement")
-create_pie_chart(data, "Access_to_Resources")
-create_pie_chart(data, "Parental_Education_Level")
-create_pie_chart(data, "Distance_from_Home")
-create_pie_chart(data, "Extracurricular_Activities")
-create_pie_chart(data, "School_Type")
-create_pie_chart(data, "Gender")
-```
-
 ## Preprocesamiento de los datos
 
 Esta función muestra las filas con valores NA o valores vacios("").
@@ -256,7 +179,7 @@ Para preparar los datos de manera óptima para el análisis, aplicamos varias tr
 
 Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor.
 
--   `Parental_Involvement`,`Access_to_Resources`,`Motivation_Level`,`Family_Income`,`Teacher_Quality` Estas variables pueden ordenarse de menor a mayor o viceversa"..
+-   `Parental_Involvement`,`Access_to_Resources`,`Motivation_Level`,`Family_Income`,`Teacher_Quality` Estas variables pueden ordenarse de menor a mayor o viceversa".
 
 -   En `Peer_Influence`, **Positive \> Neutral \> Negative** en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
 
@@ -376,9 +299,9 @@ str(df_cleaned)
 
 Para que el análisis sea óptimo, también es necesario escalar las variables.
 
--   `Sleep_Hours` toma como valor las horas de sueño por noche y será modificado ma horas semanales.
+-   `Sleep_Hours` toma como valor las horas de sueño por noche. Supondremos que el estudiante duerme esta cantidad de horas todos los días por lo que modificaremos el valor para que sean horas semanales (Multiplicamos por 7 las horas de sueño diarias).
 
-`Tutoring_Sessions` toma como valor las sesiones de tutoria por mes. Para escalar esta variable, se tomará 1 sesión de tutoría = 30 minutos (0.5 horas) y a su vez, se pasará a horas semanales. Por ejemplo, si un estudiante tiene `Tutoring_Sessions` = 4 en un mes, significa 4 \* 0.5 = 2 horas/mes, y seguidamente lo pasaremos a horas semanales, es decir, (`Tutoring_Sessions`\*0.5)/4.
+-   `Tutoring_Sessions` toma como valor las sesiones de tutoria por mes. Para escalar esta variable, se tomará 1 sesión de tutoría = 30 minutos (0.5 horas) y a su vez, se pasará a horas semanales. Por ejemplo, si un estudiante tiene `Tutoring_Sessions` = 4 en un mes, significa 4 \* 0.5 = 2 horas/mes, y seguidamente lo pasaremos a horas semanales, es decir, (`Tutoring_Sessions`\*0.5)/ 4 semanas.
 
 ```{r}
 scale_time_variables <- function(df) {
@@ -404,12 +327,111 @@ Como puede observarse, para las horas de sueño semanales, el mínimo es 28, lo 
 
 Por otro lado, para las horas de tutoría por semana, el mínimo es 0, lo cual es correcto, ya que algunos estudiantes no tienen sesiones de tutoría. La mediana es 0.125, lo que significa que muchos estudiantes tienen 0.5 sesiones por mes (0.5 \* 0.5 / 4 = 0.125 horas/semana). El máximo es 1, lo que indica que algunos estudiantes tienen 4 sesiones de tutoría por mes, que equivale a 1 hora de tutoría por semana (4 \* 0.5 / 4 = 1).
 
+## Visualizaciones Iniciales
+
+## Distribución de variables numéricas
+
+```{r}
+create_dist_grap <- function(df, variable, binwidth = 1, fill = "cornflowerblue") {
+  if (!(variable %in% colnames(df))) {
+    stop("La variable no existe en el dataframe.")
+  }
+  
+  ggplot(df, aes_string(x = variable)) +
+    geom_histogram(binwidth = binwidth, 
+                   fill = fill, color = "black", bins = 20) +
+    labs(title = paste(variable, "analysis"), x = variable, y = "Count") +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+create_dist_grap(data, "Sleep_Hours")
+create_dist_grap(data, "Hours_Studied")
+create_dist_grap(data, "Tutoring_Sessions")
+create_dist_grap(data, "Attendance", binwidth = 5)
+create_dist_grap(data, "Previous_Scores")
+create_dist_grap(data, "Exam_Score", fill = "orange")
+```
+
+
+## Distribución de variables categóricas
+
+```{r}
+create_pie_chart <- function(df, var_name) {
+  if (!(var_name %in% colnames(df))) {
+    stop("La variable no existe en el dataframe.")
+  }
+  
+  dist_var <- as.data.frame(table(df[[var_name]]))
+  colnames(dist_var) <- c(var_name, "Count")
+  dist_var$Percentage <- round(dist_var$Count / sum(dist_var$Count) * 100, 1)
+  
+
+  ggplot(dist_var, aes(x = "", y = Count, fill = get(var_name))) +
+    geom_bar(stat = "identity", width = 1) +
+    coord_polar(theta = "y") +
+    geom_text(aes(label = paste0(Percentage, "%")), position = position_stack(vjust = 0.5), size = 5) +
+    labs(title = paste("Distribución de", var_name), fill=var_name) +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(), 
+          axis.ticks = element_blank(),
+          panel.grid = element_blank())
+}
+```
+
+```{r}
+create_pie_chart(data, "Parental_Involvement")
+create_pie_chart(data, "Access_to_Resources")
+create_pie_chart(data, "Parental_Education_Level")
+create_pie_chart(data, "Distance_from_Home")
+create_pie_chart(data, "Extracurricular_Activities")
+create_pie_chart(data, "School_Type")
+create_pie_chart(data, "Gender")
+```
+
 ## Preguntas
+
+### ¿Cuántas horas de trabajo personal necesita un estudiante para obtener una alta calificación?
+
+-   **Objetivo**: Determinar la cantidad óptima de horas semanales de trabajo personal necesarias para que un estudiante alcance una alta calificación.
+
+El primer paso es definir un criterio para clasificar una calificación como "alta". Para ello, establecemos un umbral basado en un **Notable Alto**, lo que equivale aproximadamente a una calificación media de **8 o superior**.
+
+A continuación, debemos identificar a aquellos estudiantes que cumplan con dicho requisito para centrar el análisis en este grupo específico. Para ello, filtramos el conjunto de datos y seleccionamos únicamente las instancias en las que la variable **Previous_Scores** sea superior a **80** (considerando que las calificaciones en el dataset están expresadas en una escala de 0 a 100).
+
+Este filtrado nos permitirá focalizarnos en los estudiantes con alto rendimiento y analizar los factores que podrían haber influido en su desempeño académico.
+
+Para ello, filtramos las observaciones donde la variable `Previous_Scores` tenga un valor superior a 80.
+
+Además, al centrarnos la variables `Previous_Scores` eliminaremos del conjunto de datos la variable `Exam_Score`.
 
 ```{r}
 data_notas_altas <- df_cleaned[df_cleaned$Previous_Scores >= 80,]
+data_notas_altas <- subset(data_notas_altas, select = -Exam_Score)
 data_notas_altas
 ```
+
+Podemos observar en el siguiente gráfico de tarta la distribución de "altas calificaciones" respecto a la variable `Previous_Scores`.
+
+```{r}
+data$calificacion_categoria <- ifelse(data$Previous_Scores > 80, "Alta calificación", "Resto de calificaciones")
+
+
+categoria_counts <- as.data.frame(table(data$calificacion_categoria))
+categoria_counts$percentage <- round(100 * categoria_counts$Freq / sum(categoria_counts$Freq), 1)
+
+ggplot(categoria_counts, aes(x = "", y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Distribución de Calificaciones en Previous Exams", 
+       x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(axis.text = element_blank(), 
+        axis.ticks = element_blank(),
+        plot.title = element_text(hjust = 0.5)) +
+  geom_text(aes(label = paste(percentage, "%")), position = position_stack(vjust = 0.5))
+
+```
+
 
 ```{r}
 data_numeric <- data_notas_altas[, sapply(data_notas_altas, is.numeric)]
@@ -418,13 +440,16 @@ data_notas_altas[, sapply(data_notas_altas, is.numeric)] <- data_scaled
 data_notas_altas
 ```
 
+Una vez identificados los estudiantes con altas calificaciones, el siguiente paso es identificar cuales son aquellos factores que influyen más en las altas calificaciones del alumno. Para ello, generamos una **matriz de correlación** junto con un **mapa de calor**, lo que nos permitirá visualizar de manera clara cómo se relacionan las variables numéricas dentro del conjunto de datos.
+
+Con este análisis podremos detectar si existe una asociación significativa entre las horas de estudio personal y las calificaciones obtenidas. Además, nos permitirá observar la influencia de otros factores, como las horas de sueño, la asistencia a tutorías o la participación en actividades extracurriculares, en el rendimiento académico de los estudiantes con mejores notas.
+
 ```{r}
 matriz_correlacion <- cor(data_notas_altas)
 matriz_correlacion
 ```
 
 ```{r}
-
 # Convierte la matriz en un dataframe largo (long format)
 matriz_melt <- melt(matriz_correlacion)
 
@@ -438,6 +463,8 @@ ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Variables", y = "Variables", title = "Mapa de Calor de Correlación")
 ```
+
+El resultado de la matriz de correlación nos arroja que no existe gran correlación entre variables.
 
 ```{r}
 
