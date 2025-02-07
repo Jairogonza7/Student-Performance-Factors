@@ -129,104 +129,7 @@ A continuación, se describen algunos de estos atributos:
 
 -   **Exam_Score**: Calificación del examen final.
 
-## Preprocesamiento de los datos
-
-Esta función muestra las filas con valores NA o valores vacios("").
-
-```{r}
-detect_missing_data <- function(df) {
-  na_count <- colSums(is.na(df))  # Contar los NA en cada columna
-  empty_count <- colSums(sapply(df, function(x) x == ""))  # Contar los valores vacíos en cada columna
-  
-  missing_data <- data.frame(NA_Count = na_count, Empty_Count = empty_count)
-  missing_data <- missing_data[missing_data$NA_Count > 0 | missing_data$Empty_Count > 0, ]
-  
-  return(missing_data)
-}
-
-
-missing_data <- detect_missing_data(data)
-missing_data
-```
-
-En el resultado arrojado por la función podemos observar que no existen valores **NA** en las columnas de nuestro dataframe, lo que significa que no hay datos explícitamente faltantes o nulos. Sin embargo, también notamos que hay filas con **valores vacíos** en ciertas variables categóricas.
-
-Al sumar el total de valores faltantes podemos observar que puede haber un máximo de **235 filas** con algún valor faltante. Esto supone aproximadamente el **3.56%** del total de filas del conjunto de datos.
-
-Dado que la proporción de filas con valores faltantes es relativamente baja, consideramos eliminar estas instancias ya que creemos que no tendrá un impacto significativo en la integridad general del dataset.
-
-```{r}
-clean_missing_data <- function(df) {
-  original_row_count <- nrow(df)
-  
-  df <- df[!apply(df, 1, function(x) any(is.na(x) | x == "")), ] #Borramos las filas
-  
-  cleaned_row_count <- nrow(df)
-  rows_removed <- original_row_count - cleaned_row_count
-  cat("Número de filas eliminadas:", rows_removed, "\n")
-  
-  return(df)
-}
-
-data <- clean_missing_data(data)
-```
-
-Observamos que se han eliminado 229 filas por lo que el dataset sin ningún valor de faltante constaría de un total de **6378 filas**.
-
-Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor..
-
-```{r}
-convert_to_ordered_int <- function(df, column_names, levels_order, ordered=TRUE){
-  for (col in column_names){
-  df[[col]] <-  as.integer(factor(df[[col]], levels = levels_order, ordered = ordered))
-  }
-  return(df)
-}
-```
-
-Explicación:
-
--   "Parental_Involvement","Access_to_Resources","Motivation_Level","Family_Income","Teacher_Quality"Estas variables pueden ordenarse de menor a mayor o viceversa"..
-
--   En "Peer_Influence", **Positive \> Neutral \> Negative** en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
-
--   En "Distance_from_Home" ordenamos los valores en términos de **nivel de cercanía** de la escuela a la casa del estudiante.
-
--   En "Parental_Education_Level" ordenamos los valores en términos de **nivel de estudio de los padres**. Desde menos estudios (High School) hasta más estudios (Postgraduate).
-
-```{r}
-convert_to_factor <- function(df, column_names, levels) {
-  for (col in column_names) {
-    df[[col]] <- as.integer(factor(df[[col]], levels = levels))
-  }
-  return(df)
-}
-```
-
-```{r}
-clean_and_filter_data <- function(data) {
-  data <- data %>%
-    distinct() %>%
-    convert_to_ordered_int(c("Parental_Involvement","Access_to_Resources","Motivation_Level",
-                              "Family_Income","Teacher_Quality"),
-                           c("Low", "Medium", "High")) %>%
-    convert_to_ordered_int("Distance_from_Home", c("Near", "Moderate", "Far")) %>%
-    convert_to_ordered_int("Parental_Education_Level", c("High School", "College", "Postgraduate")) %>%
-    convert_to_ordered_int("Peer_Influence",c("Negative", "Neutral", "Positive")) %>%
-    convert_to_factor("Gender", c("Male","Female")) %>%
-    convert_to_factor("School_Type", c("Public","Private")) %>%
-    convert_to_factor(c("Extracurricular_Activities","Internet_Access","Learning_Disabilities"), c("No","Yes"))
-  return(data)
-}
-```
-
-```{r}
-df_cleaned <- clean_and_filter_data(data)
-```
-
-```{r}
-df_cleaned
-```
+## Visualizaciones Iniciales
 
 ## Distribución de variables numéricas
 
@@ -303,6 +206,206 @@ create_pie_chart(data, "School_Type")
 create_pie_chart(data, "Gender")
 ```
 
+## Preprocesamiento de los datos
+
+Esta función muestra las filas con valores NA o valores vacios("").
+
+```{r}
+detect_missing_data <- function(df) {
+  na_count <- colSums(is.na(df))  # Contar los NA en cada columna
+  empty_count <- colSums(sapply(df, function(x) x == ""))  # Contar los valores vacíos en cada columna
+  
+  missing_data <- data.frame(NA_Count = na_count, Empty_Count = empty_count)
+  missing_data <- missing_data[missing_data$NA_Count > 0 | missing_data$Empty_Count > 0, ]
+  
+  return(missing_data)
+}
+
+
+missing_data <- detect_missing_data(data)
+missing_data
+```
+
+En el resultado arrojado por la función podemos observar que no existen valores **NA** en las columnas de nuestro dataframe, lo que significa que no hay datos explícitamente faltantes o nulos. Sin embargo, también notamos que hay filas con **valores vacíos** en ciertas variables categóricas.
+
+Al sumar el total de valores faltantes podemos observar que puede haber un máximo de **235 filas** con algún valor faltante. Esto supone aproximadamente el **3.56%** del total de filas del conjunto de datos.
+
+Dado que la proporción de filas con valores faltantes es relativamente baja, consideramos eliminar estas instancias ya que creemos que no tendrá un impacto significativo en la integridad general del dataset.
+
+```{r}
+clean_missing_data <- function(df) {
+  original_row_count <- nrow(df)
+  
+  df <- df[!apply(df, 1, function(x) any(is.na(x) | x == "")), ] #Borramos las filas
+  
+  cleaned_row_count <- nrow(df)
+  rows_removed <- original_row_count - cleaned_row_count
+  cat("Número de filas eliminadas:", rows_removed, "\n")
+  
+  return(df)
+}
+
+data <- clean_missing_data(data)
+```
+
+Observamos que se han eliminado 229 filas por lo que el dataset sin ningún valor de faltante constaría de un total de **6378 filas**.
+
+### Codificación
+
+Para preparar los datos de manera óptima para el análisis, aplicamos varias transformaciones a las variables categóricas y ordinales. Esto nos permite estructurar la información de manera que los modelos puedan interpretarla correctamente.
+
+Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor.
+
+-   `Parental_Involvement`,`Access_to_Resources`,`Motivation_Level`,`Family_Income`,`Teacher_Quality` Estas variables pueden ordenarse de menor a mayor o viceversa"..
+
+-   En `Peer_Influence`, **Positive \> Neutral \> Negative** en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
+
+-   En `Distance_from_Home` ordenamos los valores en términos de **nivel de cercanía** de la escuela a la casa del estudiante.
+
+-   En `Parental_Education_Level` ordenamos los valores en términos de **nivel de estudio de los padres**. Desde menos estudios (High School) hasta más estudios (Postgraduate).
+
+```{r}
+convert_to_ordered_int <- function(df, column_names, levels_order, ordered = TRUE) {
+  for (col in column_names) {
+    if (col %in% colnames(df)) {
+      df[[col]] <- as.integer(factor(df[[col]], levels = levels_order, ordered = ordered))
+    }
+  }
+  return(df)
+}
+
+```
+
+Algunas variables categóricas contienen únicamente valores "Yes" o "No", por lo que es más eficiente transformarlas en valores 0 y 1, 'No' y 'Yes', respectivamente.
+
+Las variables modificadas serán:
+
+-   `Extracurricular_Activities`, `Internet_Access`, `Learning_Disabilities` → Yes = 1, No = 0
+
+```{r}
+convert_to_binary <- function(df, column_names) {
+  for (col in column_names) {
+    if (col %in% colnames(df)) {
+      df[[col]] <- ifelse(df[[col]] == "Yes", 1, 0)
+    }
+  }
+  return(df)
+}
+
+```
+
+Algunas variables no tienen una jerarquía clara, por lo que en lugar de asignar valores ordinales, creamos columnas binarias (dummies) para cada categoría, es decir, aplicamos One-Hot Encoding.
+
+-   `School_Type` pasará a dividirse en dos columnas: `School_Type_Public` y `School_Type_Private`
+-   `Gender` se convierte en `Gender_Male` y `Gender_Female`.
+
+```{r}
+convert_to_one_hot <- function(df, column_names) {
+  for (col in column_names) {
+    if (col %in% colnames(df)) {
+      unique_values <- unique(df[[col]])
+      for (val in unique_values) {
+        new_col_name <- paste(col, val, sep = "_")
+        df[[new_col_name]] <- ifelse(df[[col]] == val, 1, 0)
+      }
+      df[[col]] <- NULL  # Eliminamos la columna original después de crear las dummy variables
+    }
+  }
+  return(df)
+}
+
+```
+
+```{r}
+clean_and_filter_data <- function(data) {
+  data <- data %>%
+    distinct() %>%
+    
+    # Convertir a valores ordenados (Low < Medium < High)
+    convert_to_ordered_int(c("Parental_Involvement", "Access_to_Resources", "Motivation_Level",
+                              "Family_Income", "Teacher_Quality"),
+                           c("Low", "Medium", "High")) %>%
+    
+    # Convertir Peer_Influence en valores ordenados (Negative < Neutral < Positive)
+    convert_to_ordered_int("Peer_Influence", c("Negative", "Neutral", "Positive")) %>%
+    
+    # Convertir Parental Education Level en valores ordenados (High School < College < Postgraduate)
+    convert_to_ordered_int("Parental_Education_Level", c("High School", "College", "Postgraduate")) %>%
+    
+    # Convertir Distance_from_Home en valores ordenados (Near < Moderate < Far)
+    convert_to_ordered_int("Distance_from_Home", c("Near", "Moderate", "Far")) %>%
+    
+    # Convertir a valores binarios (No = 0, Yes = 1)
+    mutate(
+      Extracurricular_Activities = ifelse(Extracurricular_Activities == "Yes", 1, 0),
+      Internet_Access = ifelse(Internet_Access == "Yes", 1, 0),
+      Learning_Disabilities = ifelse(Learning_Disabilities == "Yes", 1, 0)
+    ) %>%
+    
+    # Aplicar One-Hot Encoding a School_Type y Gender
+    mutate(
+      School_Type_Private = ifelse(School_Type == "Private", 1, 0),
+      School_Type_Public = ifelse(School_Type == "Public", 1, 0),
+      Gender_Male = ifelse(Gender == "Male", 1, 0),
+      Gender_Female = ifelse(Gender == "Female", 1, 0)
+    ) %>%
+    
+    # Eliminar las columnas originales después de One-Hot Encoding
+    select(-School_Type, -Gender)
+
+  return(data)
+}
+
+```
+
+```{r}
+df_cleaned <- clean_and_filter_data(data)
+```
+
+```{r}
+df_cleaned
+```
+
+Después de la codificación, nuestro dataset consta de estos tipos:
+
+```{r}
+str(df_cleaned)
+```
+
+### Escalarización
+
+Para que el análisis sea óptimo, también es necesario escalar las variables.
+
+-   `Sleep_Hours` toma como valor las horas de sueño por noche y será modificado ma horas semanales.
+
+`Tutoring_Sessions` toma como valor las sesiones de tutoria por mes. Para escalar esta variable, se tomará 1 sesión de tutoría = 30 minutos (0.5 horas) y a su vez, se pasará a horas semanales. Por ejemplo, si un estudiante tiene `Tutoring_Sessions` = 4 en un mes, significa 4 \* 0.5 = 2 horas/mes, y seguidamente lo pasaremos a horas semanales, es decir, (`Tutoring_Sessions`\*0.5)/4.
+
+```{r}
+scale_time_variables <- function(df) {
+  df <- df %>%
+    mutate(
+      Sleep_Hours = Sleep_Hours * 7,  # Convertir de horas por noche a horas por semana
+      Tutoring_Sessions = (Tutoring_Sessions * 0.5) / 4  # Convertir sesiones a horas/semana
+    )
+  return(df)
+}
+
+df_cleaned <- scale_time_variables(df_cleaned)
+
+print("Sleep_Hours:") 
+summary(df_cleaned$Sleep_Hours)  # Debería estar en un rango de 0-56 horas semanales
+print("Tutoring_Sessions:")
+summary(df_cleaned$Tutoring_Sessions)  # Ahora representará horas de tutoría por semana
+
+
+```
+
+Como puede observarse, para las horas de sueño semanales, el mínimo es 28, lo cual significa que hay estudiantes que duermen 4 horas por noche (4 \* 7 = 28). La mediana es 49, lo que indica que la mayoría de los estudiantes duermen aproximadamente 7 horas por noche (7 \* 7 = 49). El máximo es 70, lo que implica que algunos estudiantes duermen 10 horas por noche (10 \* 7 = 70).
+
+Por otro lado, para las horas de tutoría por semana, el mínimo es 0, lo cual es correcto, ya que algunos estudiantes no tienen sesiones de tutoría. La mediana es 0.125, lo que significa que muchos estudiantes tienen 0.5 sesiones por mes (0.5 \* 0.5 / 4 = 0.125 horas/semana). El máximo es 1, lo que indica que algunos estudiantes tienen 4 sesiones de tutoría por mes, que equivale a 1 hora de tutoría por semana (4 \* 0.5 / 4 = 1).
+
+## Preguntas
+
 ```{r}
 data_notas_altas <- df_cleaned[df_cleaned$Previous_Scores >= 80,]
 data_notas_altas
@@ -339,25 +442,65 @@ ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
 ```{r}
 
 col_names <- colnames(data_notas_altas)
+col_names <- col_names[!is.na(col_names)]  # Eliminar posibles NA en nombres de columnas
 
-for (i in 1:length(col_names)) {
-  for (j in (i+1):length(col_names)) {  # Evita repetir pares en orden inverso
+# Asegurarse de que Previous_Scores no tenga valores faltantes
+data_notas_altas <- data_notas_altas[!is.na(data_notas_altas$Previous_Scores) & is.finite(data_notas_altas$Previous_Scores), ]
+
+# Convertir variables ordinales o categóricas en factores
+data_notas_altas$Distance_from_Home <- factor(
+  data_notas_altas$Distance_from_Home, 
+  levels = c(1, 2, 3), 
+  labels = c("Near", "Moderate", "Far")
+)
+
+# Lista para almacenar los valores numéricos de las interacciones
+interaction_data <- list()
+
+for (i in 1:(length(col_names)-1)) {  # Ajustar el límite superior
+  for (j in (i+1):length(col_names)) {  
     name1 <- col_names[i]
     name2 <- col_names[j]
     
-    if (name1 != "Previous_Scores" && name2 != "Previous_Scores") {
+    # Verificar que las variables sean adecuadas para el gráfico
+    if (!is.na(name1) && !is.na(name2) && name1 != "Previous_Scores" && name2 != "Previous_Scores") {
+      
+      # Convertir las variables a factores si no lo son
+      if (!is.factor(data_notas_altas[[name1]]) && !is.numeric(data_notas_altas[[name1]])) {
+        data_notas_altas[[name1]] <- as.factor(data_notas_altas[[name1]])
+      }
+      if (!is.factor(data_notas_altas[[name2]]) && !is.numeric(data_notas_altas[[name2]])) {
+        data_notas_altas[[name2]] <- as.factor(data_notas_altas[[name2]])
+      }
+      
+      # Calcular los promedios por nivel de interacción
+      interaction_values <- tapply(
+        data_notas_altas$Previous_Scores, 
+        list(data_notas_altas[[name1]], data_notas_altas[[name2]]), 
+        mean, 
+        na.rm = TRUE
+      )
+      
+      # Guardar los valores en la lista
+      interaction_data[[paste(name1, name2, sep = "_vs_")]] <- interaction_values
+      
+      # Generar el gráfico de interacción
       interaction.plot(
-        data_notas_altas[[name1]],  # Convertir a factor
-        data_notas_altas[[name2]],  
-        data_notas_altas$Previous_Scores,
+        x.factor = data_notas_altas[[name1]],  
+        trace.factor = data_notas_altas[[name2]],  
+        response = data_notas_altas$Previous_Scores,
         xlab = name1,
         ylab = "Previous Scores",
-        main = paste("Interacción:", name1, "vs", name2)
+        main = paste("Interacción:", name1, "vs", name2),
+        ylim = range(data_notas_altas$Previous_Scores, na.rm = TRUE)  # Establecer límites
       )
     }
   }
 }
 
-par(mfrow=c(1,1))  # Restablece la disposición de la ventana gráfica
+# Guardar los valores numéricos en un archivo para uso posterior
+save(interaction_data, file = "interaction_data.RData")
+
+
 
 ```
