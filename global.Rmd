@@ -254,8 +254,7 @@ create_pie_chart(data, "Gender")
 ```
 
 ```{r}
-class(data)
-data_notas_altas <- data[data$Previous_Scores >= 80,]
+data_notas_altas <- df_cleaned[df_cleaned$Previous_Scores >= 80,]
 data_notas_altas
 ```
 
@@ -263,11 +262,6 @@ data_notas_altas
 data_numeric <- data_notas_altas[, sapply(data_notas_altas, is.numeric)]
 data_scaled <- as.data.frame(scale(data_numeric))
 data_notas_altas[, sapply(data_notas_altas, is.numeric)] <- data_scaled
-data_notas_altas
-```
-
-```{r}
-data_notas_altas <- clean_and_filter_data(data_notas_altas)
 data_notas_altas
 ```
 
@@ -293,17 +287,29 @@ ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
 ```
 
 ```{r}
-par(mfrow=c(2,2))
-for(name1 in colnames(data_notas_altas)) {
-  for(name2 in colnames(data_notas_altas)) {
-    if(name1 != "Previous_Scores" && name2 != "Previous_Scores" && name1 != name2) {
-      interaction.plot(data_notas_altas$name1,data_notas_altas$name2,data_notas_altas$Previous_Scores)
-      
+
+col_names <- colnames(data_notas_altas)
+
+for (i in 1:length(col_names)) {
+  for (j in (i+1):length(col_names)) {  # Evita repetir pares en orden inverso
+    name1 <- col_names[i]
+    name2 <- col_names[j]
+    
+    if (name1 != "Previous_Scores" && name2 != "Previous_Scores") {
+      interaction.plot(
+        data_notas_altas[[name1]],  # Convertir a factor
+        data_notas_altas[[name2]],  
+        data_notas_altas$Previous_Scores,
+        xlab = name1,
+        ylab = "Previous Scores",
+        main = paste("Interacción:", name1, "vs", name2)
+      )
     }
   }
-  
 }
-par(mfrow=c(1,1))
+
+par(mfrow=c(1,1))  # Restablece la disposición de la ventana gráfica
+
 ```
 
 ## Posibles preguntas generales
