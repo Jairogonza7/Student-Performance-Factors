@@ -19,7 +19,7 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages <- c("tidyverse","ggplot2", "dplyr","gridExtra")
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2")
 ipak(packages)
 ```
 
@@ -87,7 +87,6 @@ A continuación, se describen algunos de estos atributos:
 
 -   **Exam_Score**: Calificación del examen final.
 
-
 ## Preprocesamiento de los datos
 
 Esta función muestra las filas con valores NA o valores vacios("").
@@ -107,10 +106,10 @@ detect_missing_data <- function(df) {
 missing_data <- detect_missing_data(data)
 missing_data
 ```
+
 Como podemos observar, nuestro dataframe no consta de valores NA pero sí de filas con valores vacios.
 
 Esta función elimina todas aquellas filas detectadas con la función anterior. En nuestro caso, tendriamos que eliminar 235 filas lo que equivale a un 3.56% del total de filas.
-
 
 ```{r}
 clean_missing_data <- function(df) {
@@ -123,7 +122,6 @@ data <- clean_missing_data(data)
 missing_data <- detect_missing_data(data)
 missing_data
 ```
-
 
 Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor..
 
@@ -138,14 +136,13 @@ convert_to_ordered_int <- function(df, column_names, levels_order, ordered=TRUE)
 
 Explicación:
 
-- "Parental_Involvement","Access_to_Resources","Motivation_Level","Family_Income","Teacher_Quality"Estas variables pueden ordenarse de menor a mayor o viceversa debido a que "High" es mayor que "Medium", y "Medium" es mayor que "Low".
+-   "Parental_Involvement","Access_to_Resources","Motivation_Level","Family_Income","Teacher_Quality"Estas variables pueden ordenarse de menor a mayor o viceversa debido a que "High" es mayor que "Medium", y "Medium" es mayor que "Low".
 
-- En "Peer_Influence", Positive > Neutral > Negative en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
+-   En "Peer_Influence", Positive \> Neutral \> Negative en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
 
-- En "Distance_from_Home" ordenamos los valores en términos de nivel de cercanía de la escuela a la casa del estudiante.
+-   En "Distance_from_Home" ordenamos los valores en términos de nivel de cercanía de la escuela a la casa del estudiante.
 
-- En "Parental_Education_Level" ordenamos los valores en términos de nivel de estudio de los padres. Desde menos estudios (High School) hasta más estudios (Postgraduate)
-
+-   En "Parental_Education_Level" ordenamos los valores en términos de nivel de estudio de los padres. Desde menos estudios (High School) hasta más estudios (Postgraduate)
 
 ```{r}
 convert_to_factor <- function(df, column_names, levels) {
@@ -155,7 +152,6 @@ convert_to_factor <- function(df, column_names, levels) {
   return(df)
 }
 ```
-
 
 ```{r}
 clean_and_filter_data <- function(data) {
@@ -181,6 +177,7 @@ df_cleaned <- clean_and_filter_data(data)
 ```{r}
 df_cleaned
 ```
+
 ## Distribution of Numerical Columns
 
 ```{r}
@@ -223,7 +220,6 @@ ggplot(data, aes(x = Exam_Score)) +
 
 ## Distribution of Categorical Columns
 
-
 ```{r}
 create_pie_chart <- function(df, var_name) {
   if (!(var_name %in% colnames(df))) {
@@ -257,30 +253,79 @@ create_pie_chart(data, "School_Type")
 create_pie_chart(data, "Gender")
 ```
 
+```{r}
+data_notas_altas <- df_cleaned[df_cleaned$Previous_Scores >= 80,]
+data_notas_altas
+```
+
+```{r}
+data_numeric <- data_notas_altas[, sapply(data_notas_altas, is.numeric)]
+data_scaled <- as.data.frame(scale(data_numeric))
+data_notas_altas[, sapply(data_notas_altas, is.numeric)] <- data_scaled
+data_notas_altas
+```
+
+```{r}
+matriz_correlacion <- cor(data_notas_altas)
+matriz_correlacion
+```
+
+```{r}
+
+# Convierte la matriz en un dataframe largo (long format)
+matriz_melt <- melt(matriz_correlacion)
+
+# Genera el mapa de calor
+ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1, 1), space = "Lab", 
+                       name = "Correlación") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Variables", y = "Variables", title = "Mapa de Calor de Correlación")
+```
+
+```{r}
+
+col_names <- colnames(data_notas_altas)
+
+for (i in 1:length(col_names)) {
+  for (j in (i+1):length(col_names)) {  # Evita repetir pares en orden inverso
+    name1 <- col_names[i]
+    name2 <- col_names[j]
+    
+    if (name1 != "Previous_Scores" && name2 != "Previous_Scores") {
+      interaction.plot(
+        data_notas_altas[[name1]],  # Convertir a factor
+        data_notas_altas[[name2]],  
+        data_notas_altas$Previous_Scores,
+        xlab = name1,
+        ylab = "Previous Scores",
+        main = paste("Interacción:", name1, "vs", name2)
+      )
+    }
+  }
+}
+
+par(mfrow=c(1,1))  # Restablece la disposición de la ventana gráfica
+
+```
+
 ## Posibles preguntas generales
 
 ### ¿Cuales son los factores que más correlacionados se encuentran?
+
 ### ¿Se pueden agrupar a los estudiantes en una clase según sus características?
+
 Esto podria servir para dividir una clase en grupos de modo que los estudiantes que sean más parecidos entre sí se sienten cerca o incluso que vayan al mismo grupo.
 
+### ¿Como explicarias los niveles de motivación baja de un alumno?
 
-### ¿Como explicarias los niveles de motivación baja de un alumno? 
 ### ¿Cuales son las horas de trabajo personal que tiene que realizar un estudiante para que pueda obtener una alta calificación?
+
 ### ¿Existen variables que impliquen el cumplimiento de otras?
 
-### Jairo => 
-### Pedro =>
+### Jairo =\>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+### Pedro =\>
