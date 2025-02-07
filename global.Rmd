@@ -3,13 +3,55 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-##Description
+## Descripción del dominio
 
-This dataset provides a comprehensive overview of various factors affecting student performance in exams. It includes information on study habits, attendance, parental involvement, and other aspects influencing academic success.
+El rendimiento académico es un tema clave en la educación, ya que influye directamente en las oportunidades que tendrán los jovenes en el día de mañana y en el desarrollo de nuestra sociedad. Comprender qué factores afectan al desempeño de los estudiantes permitirá a las instituciones educativas a mejorar los métodos de enseñanza, diseñar políticas educativas más efectivas y proporcionar un mayor apoyo a aquellos estudiantes que lo necesiten.
 
-## Required Libraries
+### Enfoque del Trabajo
 
-The ipak function is designed to make installing and loading packages in R easier. It is useful when you want to make sure that all the packages needed for a script or project are automatically installed and loaded. <https://gist.github.com/stevenworthington/3178163>
+Este estudio analiza los factores que influyen en el rendimiento académico de los estudiantes. Para ello, se hace uso de datos relacionados con aspectos personales, sociales y académicos para identificar patrones y determinar qué variables tienen mayor impacto en el desempeño escolar.
+
+En particular, el estudio se enfoca en responder dos preguntas fundamentales:
+
+1.  **¿Se pueden agrupar a los estudiantes en una clase según sus características?**\
+    La organización de los estudiantes dentro del aula puede influir significativamente en su aprendizaje y rendimiento. Por esta razón, se explorará la posibilidad de segmentar a los alumnos con base en características clave como sus calificaciones previas, el tiempo dedicado al estudio, su nivel de motivación, la presencia de discapacidades de aprendizaje y su participación en actividades extracurriculares.
+
+    Este enfoque permitirá una distribución estratégica que potencie el aprendizaje al ubicar a los estudiantes en entornos que favorezcan su desarrollo académico y personal.
+
+2.  **¿Cuántas horas de trabajo personal necesita un estudiante para obtener una alta calificación?**\
+    Otro objetivo del estudio es determinar cuántas horas diarias de estudio autónomo son necesarias para que un estudiante alcance una calificación alta (entre 8 y 10). Para ello, se analizarán factores como las horas de estudio semanal, el tiempo de sueño diario y la cantidad de sesiones de tutoría recibidas, ya que estos aspectos pueden influir en el rendimiento académico. A través de un modelo de regresión, se buscará cuantificar la relación entre estas variables y el desempeño estudiantil, proporcionando una guía para optimizar los hábitos de estudio.
+
+A través de este análisis, se pretende aportar información valiosa para mejorar las estrategias educativas, optimizar la distribución de los estudiantes en el aula y ofrecer recomendaciones que permitan a los alumnos maximizar su rendimiento académico.
+
+### Interés y motivación del estudio
+
+El mundo en el que vivimos está en constante transformación. Los sistemas educativos, como muchos otros aspectos de nuestra sociedad, deben adaptarse a nuevas realidades y desafíos. En este contexto, resulta crucial comprender los factores que influyen en el rendimiento académico de los estudiantes, con el objetivo de mejorar los procesos de enseñanza y crear un entorno de aprendizaje más inclusivo y eficaz. Lo interesante de este estudio radica en identificar patrones y relaciones entre distintas variables que podrían tener un impacto directo en la forma en que los estudiantes aprenden y se desarrollan.
+
+En particular, nos gustaría subrayar que el rendimiento académico no depende únicamente de la capacidad intelectual del estudiante, sino también de factores como el apoyo familiar, los hábitos de estudio, la motivación personal y la presencia de discapacidades de aprendizaje. Este enfoque permite adoptar una perspectiva más personalizada de la educación, lo que a su vez puede contribuir a una mejor planificación y diseño de estrategias pedagógicas más adaptadas a las necesidades de los estudiantes.
+
+En el grupo de desarrollo de este trabajo, nos encontramos tanto estudiantes de **Ingeniería Informática** como de **Ingeniería de la Salud**. Esta diversidad de perspectivas y formaciones académicas enriquece el enfoque del estudio, ya que, desde distintas disciplinas, reconocemos la importancia de crear un entorno educativo que no solo se base en el rendimiento académico, sino también en el bienestar y las capacidades individuales de cada estudiante. Al ser nosotros mismos estudiantes, sabemos de primera mano que las aulas son cada vez más diversas, y entender cómo organizar y distribuir a los estudiantes de acuerdo con sus necesidades específicas es clave para optimizar su rendimiento.
+
+### **Importancia local/nacional y en el contexto actual**
+
+A nivel global, la educación es un pilar fundamental para el desarrollo. Países con bajos índices de rendimiento académico suelen enfrentar mayores desafíos económicos y sociales. Además, en un contexto postpandemia, donde la enseñanza a distancia ha cambiado la forma en que los estudiantes aprenden, es más importante que nunca entender qué factores afectan su desempeño y cómo pueden optimizarse los procesos de enseñanza.
+
+## Descripción del dataset
+
+El dataset ha sido extraído de la plataforma Kaggle y proporcionado por el usuario *lainguyn123*. Se puede acceder al conjunto de datos a través del siguiente enlace: [Student Performance Factors Dataset](https://www.kaggle.com/datasets/lainguyn123/student-performance).
+
+El archivo que contiene el conjunto de datos se denomina *StudentPerformanceFactors* y está en formato **CSV**, con un tamaño aproximado de **641 kB**.
+
+Este conjunto de datos proviene de una investigación que analiza los factores que afectan el rendimiento académico de los estudiantes. Incluye diversas variables relacionadas con características personales, académicas y sociales, tales como hábitos de estudio, asistencia, participación de los padres, y otros aspectos clave que influyen en el éxito académico de los estudiantes.
+
+En cuanto a sus dimensiones, el dataset consta de un total de:
+
+-   **6,607 Filas**
+
+-   **20 Columnas**
+
+## Librerías
+
+La función ipak está diseñada para facilitar la instalación y carga de paquetes en R. Es útil cuando desea asegurarse de que todos los paquetes necesarios para un script o proyecto se instalan y cargan automáticamente. <https://gist.github.com/stevenworthington/3178163>
 
 ```{r}
 ipak <- function(pkg){
@@ -107,21 +149,29 @@ missing_data <- detect_missing_data(data)
 missing_data
 ```
 
-Como podemos observar, nuestro dataframe no consta de valores NA pero sí de filas con valores vacios.
+En el resultado arrojado por la función podemos observar que no existen valores **NA** en las columnas de nuestro dataframe, lo que significa que no hay datos explícitamente faltantes o nulos. Sin embargo, también notamos que hay filas con **valores vacíos** en ciertas variables categóricas.
 
-Esta función elimina todas aquellas filas detectadas con la función anterior. En nuestro caso, tendriamos que eliminar 235 filas lo que equivale a un 3.56% del total de filas.
+Al sumar el total de valores faltantes podemos observar que puede haber un máximo de **235 filas** con algún valor faltante. Esto supone aproximadamente el **3.56%** del total de filas del conjunto de datos.
+
+Dado que la proporción de filas con valores faltantes es relativamente baja, consideramos eliminar estas instancias ya que creemos que no tendrá un impacto significativo en la integridad general del dataset.
 
 ```{r}
 clean_missing_data <- function(df) {
-  df_cleaned <- df[!apply(df, 1, function(x) any(is.na(x) | x == "")), ]
-
-  return(df_cleaned)
+  original_row_count <- nrow(df)
+  
+  df <- df[!apply(df, 1, function(x) any(is.na(x) | x == "")), ] #Borramos las filas
+  
+  cleaned_row_count <- nrow(df)
+  rows_removed <- original_row_count - cleaned_row_count
+  cat("Número de filas eliminadas:", rows_removed, "\n")
+  
+  return(df)
 }
-data <- clean_missing_data(data)
 
-missing_data <- detect_missing_data(data)
-missing_data
+data <- clean_missing_data(data)
 ```
+
+Observamos que se han eliminado 229 filas por lo que el dataset sin ningún valor de faltante constaría de un total de **6378 filas**.
 
 Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor..
 
@@ -136,13 +186,13 @@ convert_to_ordered_int <- function(df, column_names, levels_order, ordered=TRUE)
 
 Explicación:
 
--   "Parental_Involvement","Access_to_Resources","Motivation_Level","Family_Income","Teacher_Quality"Estas variables pueden ordenarse de menor a mayor o viceversa debido a que "High" es mayor que "Medium", y "Medium" es mayor que "Low".
+-   "Parental_Involvement","Access_to_Resources","Motivation_Level","Family_Income","Teacher_Quality"Estas variables pueden ordenarse de menor a mayor o viceversa"..
 
--   En "Peer_Influence", Positive \> Neutral \> Negative en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
+-   En "Peer_Influence", **Positive \> Neutral \> Negative** en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
 
--   En "Distance_from_Home" ordenamos los valores en términos de nivel de cercanía de la escuela a la casa del estudiante.
+-   En "Distance_from_Home" ordenamos los valores en términos de **nivel de cercanía** de la escuela a la casa del estudiante.
 
--   En "Parental_Education_Level" ordenamos los valores en términos de nivel de estudio de los padres. Desde menos estudios (High School) hasta más estudios (Postgraduate)
+-   En "Parental_Education_Level" ordenamos los valores en términos de **nivel de estudio de los padres**. Desde menos estudios (High School) hasta más estudios (Postgraduate).
 
 ```{r}
 convert_to_factor <- function(df, column_names, levels) {
@@ -178,7 +228,7 @@ df_cleaned <- clean_and_filter_data(data)
 df_cleaned
 ```
 
-## Distribution of Numerical Columns
+## Distribución de variables numéricas
 
 ```{r}
 ggplot(df_cleaned, aes(x = Hours_Studied)) +
@@ -218,7 +268,7 @@ ggplot(data, aes(x = Exam_Score)) +
   labs(title = "Distribution of Exam Scores", x = "Exam Score", y = "Count")
 ```
 
-## Distribution of Categorical Columns
+## Distribución de variables categóricas
 
 ```{r}
 create_pie_chart <- function(df, var_name) {
@@ -311,21 +361,3 @@ for (i in 1:length(col_names)) {
 par(mfrow=c(1,1))  # Restablece la disposición de la ventana gráfica
 
 ```
-
-## Posibles preguntas generales
-
-### ¿Cuales son los factores que más correlacionados se encuentran?
-
-### ¿Se pueden agrupar a los estudiantes en una clase según sus características?
-
-Esto podria servir para dividir una clase en grupos de modo que los estudiantes que sean más parecidos entre sí se sienten cerca o incluso que vayan al mismo grupo.
-
-### ¿Como explicarias los niveles de motivación baja de un alumno?
-
-### ¿Cuales son las horas de trabajo personal que tiene que realizar un estudiante para que pueda obtener una alta calificación?
-
-### ¿Existen variables que impliquen el cumplimiento de otras?
-
-### Jairo =\>
-
-### Pedro =\>
