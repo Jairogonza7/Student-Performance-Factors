@@ -1,6 +1,0 @@
-"0","convert_to_factor <- function(df, column_names, levels) {"
-"0","  for (col in column_names) {"
-"0","    df[[col]] <- as.integer(factor(df[[col]], levels = levels))"
-"0","  }"
-"0","  return(df)"
-"0","}"
