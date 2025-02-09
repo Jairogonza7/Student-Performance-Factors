@@ -173,6 +173,65 @@ data <- clean_missing_data(data)
 
 Observamos que se han eliminado 229 filas por lo que el dataset sin ningún valor de faltante constaría de un total de **6378 filas**.
 
+### Detección de outliers
+
+```{r}
+numeric_cols <- sapply(data, is.numeric)
+
+count_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR
+  upper_bound <- Q3 + 1.5 * IQR
+  sum(x < lower_bound | x > upper_bound, na.rm = TRUE)
+}
+
+
+for (col_name in names(data)[numeric_cols]) {
+  num_outliers <- count_outliers(data[[col_name]])
+  print(paste("Variable:", col_name, "- Outliers:", num_outliers))
+}
+```
+
+Podemos observar que existen outliers en las variables `Hours_studies`, `Tutoring_Sessions` y `Exam_Score`. Vamos a visualizar dichos valores mediante gráficos de caja para observar la distribución de ciertos valores.
+
+```{r}
+plot_boxplots <- function(df) {
+  plots <- list()
+  numeric_cols <- c("Hours_Studied", "Tutoring_Sessions", "Exam_Score")
+  numeric_cols <- numeric_cols[numeric_cols %in% names(df)]
+  
+
+  for (var in numeric_cols) {
+    p <- ggplot(df, aes_string(y = var)) +
+      geom_boxplot(fill = "orange", alpha = 0.7) +
+      theme_minimal() +
+      labs(title = paste("Outliers in", var), y = var)
+    
+    plots[[var]] <- p
+  }
+
+  for (p in plots) {
+    print(p)
+  }
+}
+```
+
+```{r}
+plot_boxplots(data)
+```
+
+Al observar los gráficos de caja, podemos identificar la presencia de valores atípicos. Sin embargo, algunos de estos valores no deben considerarse como tales. Por ejemplo, 8 horas de tutorías es un valor completamente válido. En cambio, en el gráfico de `Exam_Scores`, se pueden notar calificaciones que superan el valor máximo permitido de 100, lo que indica un posible error en los datos.
+
+Para solucionar esto, filtraremos las filas en las que el valor de `Exam_Score` sea superior a 100 y lo estableceremos a la máxima nota posible, es decir, 100.
+
+```{r}
+data$Exam_Score[data$Exam_Score > 100] <- 100
+max_Exam_score <- max(data$Exam_Score)
+print(max_Exam_score)
+```
+
 ### Codificación
 
 Para preparar los datos de manera óptima para el análisis, aplicamos varias transformaciones a las variables categóricas y ordinales. Esto nos permite estructurar la información de manera que los modelos puedan interpretarla correctamente.
@@ -301,14 +360,14 @@ Para que el análisis sea óptimo, también es necesario escalar las variables.
 
 -   `Sleep_Hours` toma como valor las horas de sueño por noche. Supondremos que el estudiante duerme esta cantidad de horas todos los días por lo que modificaremos el valor para que sean horas semanales (Multiplicamos por 7 las horas de sueño diarias).
 
--   `Tutoring_Sessions` toma como valor las sesiones de tutoria por mes. Para escalar esta variable, se tomará 1 sesión de tutoría = 30 minutos (0.5 horas) y a su vez, se pasará a horas semanales. Por ejemplo, si un estudiante tiene `Tutoring_Sessions` = 4 en un mes, significa 4 \* 0.5 = 2 horas/mes, y seguidamente lo pasaremos a horas semanales, es decir, (`Tutoring_Sessions`\*0.5)/ 4 semanas.
+-   `Tutoring_Sessions` toma como valor las sesiones de tutoria por mes. Para escalar esta variable, se tomará 1 sesión de tutoría = 1 hora y a su vez, se pasará a horas semanales. Por ejemplo, si un estudiante tiene `Tutoring_Sessions` = 4 en un mes, significa que tiene 1 por semana (`Tutoring_Sessions`/ 4 semanas).
 
 ```{r}
 scale_time_variables <- function(df) {
   df <- df %>%
     mutate(
       Sleep_Hours = Sleep_Hours * 7,  # Convertir de horas por noche a horas por semana
-      Tutoring_Sessions = (Tutoring_Sessions * 0.5) / 4  # Convertir sesiones a horas/semana
+      Tutoring_Sessions = Tutoring_Sessions / 4  # Convertir sesiones a horas/semana
     )
   return(df)
 }
@@ -325,7 +384,7 @@ summary(df_cleaned$Tutoring_Sessions)  # Ahora representará horas de tutoría p
 
 Como puede observarse, para las horas de sueño semanales, el mínimo es 28, lo cual significa que hay estudiantes que duermen 4 horas por noche (4 \* 7 = 28). La mediana es 49, lo que indica que la mayoría de los estudiantes duermen aproximadamente 7 horas por noche (7 \* 7 = 49). El máximo es 70, lo que implica que algunos estudiantes duermen 10 horas por noche (10 \* 7 = 70).
 
-Por otro lado, para las horas de tutoría por semana, el mínimo es 0, lo cual es correcto, ya que algunos estudiantes no tienen sesiones de tutoría. La mediana es 0.125, lo que significa que muchos estudiantes tienen 0.5 sesiones por mes (0.5 \* 0.5 / 4 = 0.125 horas/semana). El máximo es 1, lo que indica que algunos estudiantes tienen 4 sesiones de tutoría por mes, que equivale a 1 hora de tutoría por semana (4 \* 0.5 / 4 = 1).
+Por otro lado, para las horas de tutoría por semana, el mínimo es 0, lo cual es correcto, ya que algunos estudiantes no tienen sesiones de tutoría. La mediana es 0.25, lo que significa que muchos estudiantes tienen 1 sesión por mes (1 hora / 4 = 0.25 horas/semana). El máximo es 2, lo que indica que algunos estudiantes tienen 8 sesiones de tutoría por mes, que equivale a 2 horas de tutoría por semana.
 
 ## Visualizaciones Iniciales
 
@@ -344,6 +403,7 @@ create_dist_grap <- function(df, variable, binwidth = 1, fill = "cornflowerblue"
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
 }
+
 create_dist_grap(data, "Sleep_Hours")
 create_dist_grap(data, "Hours_Studied")
 create_dist_grap(data, "Tutoring_Sessions")
@@ -351,7 +411,6 @@ create_dist_grap(data, "Attendance", binwidth = 5)
 create_dist_grap(data, "Previous_Scores")
 create_dist_grap(data, "Exam_Score", fill = "orange")
 ```
-
 
 ## Distribución de variables categóricas
 
@@ -432,6 +491,36 @@ ggplot(categoria_counts, aes(x = "", y = Freq, fill = Var1)) +
 
 ```
 
+Para nuestro estudio debemos crear una nueva métrica que refleje de forma general las **horas semanales de trabajo del estudiante**. Para ello, vamos a combinar varias de las variables disponibles para obtener una estimación más completa de las horas de dedicación del estudiante. Algunas de las variables que podrían influir directamente en las horas de trabajo semanales incluyen:
+
+-   `Hours_Studied`: El número de horas que el estudiante estudia.
+-   `Tutoring_Sessions`: El número de sesiones de tutoría.
+
+La fórmula para las horas semanales de trabajo es
+
+$Horas\_Semanales\_Work = Hours\_Studied + Tutoring\_Sessions $.
+
+Donde:
+
+-   `Hours_Studied`: Número de horas estudiadas.
+
+-   `Tutoring_Sessions`: Número de sesiones de tutoría ( 1 hora por sesión).
+
+
+```{r}
+if ("Hours_Studied" %in% names(data_notas_altas) & 
+    "Tutoring_Sessions" %in% names(data_notas_altas) & 
+    "Physical_Activity" %in% names(data_notas_altas)){
+  
+  data_notas_altas$Horas_Semanales_Work <- data_notas_altas$Hours_Studied +               data_notas_altas$Tutoring_Sessions
+
+  data_notas_altas <- data_notas_altas[, !(names(data_notas_altas) %in% c("Hours_Studied", "Tutoring_Sessions", "Physical_Activity"))]
+} else {
+  print("Las columnas necesarias ya han sido eliminadas.")
+}
+  
+summary(data_notas_altas$Horas_Semanales_Work)
+```
 
 ```{r}
 data_numeric <- data_notas_altas[, sapply(data_notas_altas, is.numeric)]
@@ -446,14 +535,8 @@ Con este análisis podremos detectar si existe una asociación significativa ent
 
 ```{r}
 matriz_correlacion <- cor(data_notas_altas)
-matriz_correlacion
-```
-
-```{r}
-# Convierte la matriz en un dataframe largo (long format)
 matriz_melt <- melt(matriz_correlacion)
 
-# Genera el mapa de calor
 ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
   geom_tile() +
   scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
@@ -467,67 +550,6 @@ ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
 El resultado de la matriz de correlación nos arroja que no existe gran correlación entre variables.
 
 ```{r}
-
-col_names <- colnames(data_notas_altas)
-col_names <- col_names[!is.na(col_names)]  # Eliminar posibles NA en nombres de columnas
-
-# Asegurarse de que Previous_Scores no tenga valores faltantes
-data_notas_altas <- data_notas_altas[!is.na(data_notas_altas$Previous_Scores) & is.finite(data_notas_altas$Previous_Scores), ]
-
-# Convertir variables ordinales o categóricas en factores
-data_notas_altas$Distance_from_Home <- factor(
-  data_notas_altas$Distance_from_Home, 
-  levels = c(1, 2, 3), 
-  labels = c("Near", "Moderate", "Far")
-)
-
-# Lista para almacenar los valores numéricos de las interacciones
-interaction_data <- list()
-
-for (i in 1:(length(col_names)-1)) {  # Ajustar el límite superior
-  for (j in (i+1):length(col_names)) {  
-    name1 <- col_names[i]
-    name2 <- col_names[j]
-    
-    # Verificar que las variables sean adecuadas para el gráfico
-    if (!is.na(name1) && !is.na(name2) && name1 != "Previous_Scores" && name2 != "Previous_Scores") {
-      
-      # Convertir las variables a factores si no lo son
-      if (!is.factor(data_notas_altas[[name1]]) && !is.numeric(data_notas_altas[[name1]])) {
-        data_notas_altas[[name1]] <- as.factor(data_notas_altas[[name1]])
-      }
-      if (!is.factor(data_notas_altas[[name2]]) && !is.numeric(data_notas_altas[[name2]])) {
-        data_notas_altas[[name2]] <- as.factor(data_notas_altas[[name2]])
-      }
-      
-      # Calcular los promedios por nivel de interacción
-      interaction_values <- tapply(
-        data_notas_altas$Previous_Scores, 
-        list(data_notas_altas[[name1]], data_notas_altas[[name2]]), 
-        mean, 
-        na.rm = TRUE
-      )
-      
-      # Guardar los valores en la lista
-      interaction_data[[paste(name1, name2, sep = "_vs_")]] <- interaction_values
-      
-      # Generar el gráfico de interacción
-      interaction.plot(
-        x.factor = data_notas_altas[[name1]],  
-        trace.factor = data_notas_altas[[name2]],  
-        response = data_notas_altas$Previous_Scores,
-        xlab = name1,
-        ylab = "Previous Scores",
-        main = paste("Interacción:", name1, "vs", name2),
-        ylim = range(data_notas_altas$Previous_Scores, na.rm = TRUE)  # Establecer límites
-      )
-    }
-  }
-}
-
-# Guardar los valores numéricos en un archivo para uso posterior
-save(interaction_data, file = "interaction_data.RData")
-
-
-
+model1 = lm(Horas_Semanales_Work ~ .^2, data = data_notas_altas)
+summary(model1)
 ```
