@@ -61,7 +61,7 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2")
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car")
 ipak(packages)
 ```
 
@@ -498,14 +498,13 @@ Para nuestro estudio debemos crear una nueva métrica que refleje de forma gener
 
 La fórmula para las horas semanales de trabajo es
 
-$Horas\_Semanales\_Work = Hours\_Studied + Tutoring\_Sessions $.
+\$Horas_Semanales_Work = Hours_Studied + Tutoring_Sessions \$.
 
 Donde:
 
 -   `Hours_Studied`: Número de horas estudiadas.
 
 -   `Tutoring_Sessions`: Número de sesiones de tutoría ( 1 hora por sesión).
-
 
 ```{r}
 if ("Hours_Studied" %in% names(data_notas_altas) & 
@@ -550,6 +549,43 @@ ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
 El resultado de la matriz de correlación nos arroja que no existe gran correlación entre variables.
 
 ```{r}
-model1 = lm(Horas_Semanales_Work ~ .^2, data = data_notas_altas)
+model1 = lm(Horas_Semanales_Work ~ ., data = data_notas_altas)
 summary(model1)
+```
+
+```{r}
+data_notas_alta_simplificado <- data_notas_altas %>% dplyr::select(-School_Type_Public, -Gender_Female)
+data_notas_alta_simplificado
+```
+
+```{r}
+vif_values <- vif(lm(Horas_Semanales_Work ~ ., data = data_notas_alta_simplificado))
+print(vif_values)
+```
+
+```{r}
+indices <- sample(1:nrow(data_notas_alta_simplificado), size = 0.7 * nrow(data_notas_alta_simplificado))
+train_data <- data_notas_alta_simplificado[indices, ]
+test_data <- data_notas_alta_simplificado[-indices, ]
+```
+
+```{r}
+library(MASS)
+model_reduced <- stepAIC(lm(Horas_Semanales_Work ~ .^2, data = train_data), direction = "both")
+summary(model_reduced)
+```
+
+```{r}
+predicciones <- predict(model_reduced, newdata = test_data)
+```
+
+```{r}
+comparacion <- data.frame(Real = test_data$Horas_Semanales_Work, Predicha = predicciones)
+comparacion
+```
+
+```{r}
+residuos <- comparacion$Real - comparacion$Predicha
+rmse <- sqrt(mean(residuos^2))
+print(paste("RMSE: ", rmse))
 ```
