@@ -61,7 +61,7 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car")
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car", "ggridges", "factoextra", "cluster")
 ipak(packages)
 ```
 
@@ -448,6 +448,151 @@ create_pie_chart(data, "Gender")
 ```
 
 ## Preguntas
+
+### ¿**Se pueden agrupar a los estudiantes en una clase según sus características?**
+
+-   **Objectivo**: Intentar asignar a los alumnos a grupos de manera que se favorezca su aprendizaje.
+
+En primer lugar, decidimos una estrategia a adoptar para agrupar a los alumnos. Nos enfocamos en diferentes variables según el objetivo a cumplir:
+
+-   **Academic**: Nos interesamos en las variables que reflejan el éxito escolar en términos académicos, como la asistencia, el número de horas de estudio o los resultados obtenidos.
+
+-   **Support**: Aquí, el enfoque está en las necesidades de apoyo del alumno. ¿Necesita horas de tutoría? ¿Tiene dificultades para aprender?
+
+-   **Resource**: ¿Dispone el alumno de los recursos necesarios para favorecer su aprendizaje?
+
+-   **Extra**: Variables relacionadas con el ocio y la vida social. ¿Tiene el alumno actividades extracurriculares? ¿Cuáles son sus relaciones de amistad?
+
+```{r}
+academic_columns <- c("Hours_Studied", "Attendance", "Exam_Score", "Previous_Scores")
+support_columns <- c("Learning_Disabilities", "Tutoring_Sessions", "Access_to_Resources")
+resource_columns <- c("Family_Income", "Access_to_Resources", "Internet_Access", "Parental_Education_Level")
+extra_columns <- c("Extracurricular_Activities", "Physical_Activity", "Peer_Influence")
+```
+
+```{r}
+df_scaled = as_tibble(scale(df_cleaned))
+
+data_for_cluster_academic <- select(df_scaled, all_of(academic_columns))
+data_for_cluster_support <- select(df_scaled, all_of(support_columns))
+data_for_cluster_resource <- select(df_scaled, all_of(resource_columns))
+data_for_cluster_extra <- select(df_scaled, all_of(extra_columns))
+```
+
+Para agrupar a los alumnos según estas categorías, utilizaremos el método de **clustering K-Means**.
+
+Primero, definimos una función que nos permita seleccionar el mejor valor de **K**.
+
+```{r}
+compare_k <- function(df) {
+  print(fviz_nbclust(df, kmeans, method = "wss") + 
+    ggtitle("Elbow Method for Optimal K"))
+
+  print(fviz_nbclust(df, kmeans, method = "silhouette") + 
+    ggtitle("Silhouette Method for Optimal K"))
+}
+```
+
+Luego, definimos una función que aplique el clustering y añada la variable **cluster** a nuestro conjunto de datos inicial.
+
+```{r}
+applying_kmeans <- function(data_for_clustering, k){
+  set.seed(42)
+  kmeans_model <- kmeans(data_for_clustering, centers = k, nstart = 25)
+  df_with_cluster <- as_tibble(df_cleaned)
+  df_with_cluster$Cluster <- as.factor(kmeans_model$cluster)
+  return(df_with_cluster)
+}
+```
+
+Finalmente, definimos una función que nos permita **comparar los grupos formados**:\
+- ¿Cuántos alumnos hay en cada cluster?\
+- Comparación de las variables utilizadas en el clustering mediante **ridgeline plots**.
+
+```{r}
+print_clustering_results <- function(df_with_clusters, data_for_cluster, columns_to_focus){
+  cluster_summary <- df_with_clusters %>%
+    group_by(Cluster) %>%
+    summarise(
+      Num_Students = n()
+    )
+  
+  print(ggplot(cluster_summary, aes(x = as.factor(Cluster), y = Num_Students, fill = as.factor(Cluster))) +
+    geom_bar(stat = "identity") +
+    labs(title = "Number of Students in Each Cluster", x = "Cluster", y = "Student Count") +
+    theme_minimal())
+  
+  for (column in columns_to_focus) {
+    print(ggplot(df_with_clusters, aes(x = !!sym(column), y = Cluster, fill = Cluster)) +
+      geom_density_ridges() +
+      labs(title = paste(column, " in Each Cluster"), x = column, y = "Cluster") +
+      theme_ridges() + 
+      theme(legend.position = "none"))
+  }
+  
+  print(fviz_cluster(list(data = data_for_cluster, cluster = df_with_clusters$Cluster),
+               geom = "point",
+               ellipse.type = "convex",
+               ggtheme = theme_minimal(),
+               main = "Cluster Visualization (PCA Projection)"))
+}
+```
+
+#### Academic
+
+```{r}
+compare_k(data_for_cluster_academic)
+```
+
+```{r}
+df_cluster_academic <- applying_kmeans(data_for_cluster_academic, 2)
+```
+
+```{r}
+print_clustering_results(df_cluster_academic, data_for_cluster_academic, academic_columns)
+```
+
+#### Support
+
+```{r}
+compare_k(data_for_cluster_support)
+```
+
+```{r}
+df_cluster_support <- applying_kmeans(data_for_cluster_support, 8)
+```
+
+```{r}
+print_clustering_results(df_cluster_support, data_for_cluster_support, support_columns)
+```
+
+#### Resources
+
+```{r}
+compare_k(data_for_cluster_resource)
+```
+
+```{r}
+df_cluster_resource <- applying_kmeans(data_for_cluster_resource, 8)
+```
+
+```{r}
+print_clustering_results(df_cluster_resource, data_for_cluster_resource, resource_columns)
+```
+
+#### Extra
+
+```{r}
+compare_k(data_for_cluster_extra)
+```
+
+```{r}
+df_cluster_extra <- applying_kmeans(data_for_cluster_extra, 10)
+```
+
+```{r}
+print_clustering_results(df_cluster_extra, data_for_cluster_extra, extra_columns)
+```
 
 ### ¿Cuántas horas de trabajo personal necesita un estudiante para obtener una alta calificación?
 
