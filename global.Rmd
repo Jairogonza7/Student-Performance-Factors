@@ -61,7 +61,7 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car", "ggridges", "factoextra", "cluster")
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car", "ggridges", "factoextra", "cluster", "NbClust")
 ipak(packages)
 ```
 
@@ -463,6 +463,8 @@ En primer lugar, decidimos una estrategia a adoptar para agrupar a los alumnos. 
 
 -   **Extra**: Variables relacionadas con el ocio y la vida social. ¿Tiene el alumno actividades extracurriculares? ¿Cuáles son sus relaciones de amistad?
 
+-   **General**: Todas las variables. ¿Que grupos conforman estos datos?
+
 ```{r}
 academic_columns <- c("Hours_Studied", "Attendance", "Exam_Score", "Previous_Scores")
 support_columns <- c("Learning_Disabilities", "Tutoring_Sessions", "Access_to_Resources")
@@ -477,6 +479,7 @@ data_for_cluster_academic <- select(df_scaled, all_of(academic_columns))
 data_for_cluster_support <- select(df_scaled, all_of(support_columns))
 data_for_cluster_resource <- select(df_scaled, all_of(resource_columns))
 data_for_cluster_extra <- select(df_scaled, all_of(extra_columns))
+data_for_cluster_general <- df_scaled
 ```
 
 Para agrupar a los alumnos según estas categorías, utilizaremos el método de **clustering K-Means**.
@@ -518,23 +521,34 @@ print_clustering_results <- function(df_with_clusters, data_for_cluster, columns
     )
   
   print(ggplot(cluster_summary, aes(x = as.factor(Cluster), y = Num_Students, fill = as.factor(Cluster))) +
-    geom_bar(stat = "identity") +
-    labs(title = "Number of Students in Each Cluster", x = "Cluster", y = "Student Count") +
-    theme_minimal())
+          geom_bar(stat = "identity") +
+          labs(title = "Number of Students in Each Cluster", x = "Cluster", y = "Student Count") +
+          theme_minimal())
   
   for (column in columns_to_focus) {
-    print(ggplot(df_with_clusters, aes(x = !!sym(column), y = Cluster, fill = Cluster)) +
-      geom_density_ridges() +
-      labs(title = paste(column, " in Each Cluster"), x = column, y = "Cluster") +
-      theme_ridges() + 
-      theme(legend.position = "none"))
+    print(ggplot(df_with_clusters, aes(x = as.factor(Cluster), y = !!sym(column), fill = as.factor(Cluster))) +
+            geom_boxplot() +
+            labs(title = paste(column, "Distribution in Each Cluster"), x = "Cluster", y = column) +
+            theme_minimal())
   }
   
   print(fviz_cluster(list(data = data_for_cluster, cluster = df_with_clusters$Cluster),
-               geom = "point",
-               ellipse.type = "convex",
-               ggtheme = theme_minimal(),
-               main = "Cluster Visualization (PCA Projection)"))
+                     geom = "point",
+                     ellipse.type = "convex",
+                     ggtheme = theme_minimal(),
+                     main = "Cluster Visualization (PCA Projection)"))
+}
+
+```
+
+```{r}
+find_optimal_clusters <- function(data) {
+  
+  result <- NbClust(data, diss = NULL, distance = "euclidean", 
+                    min.nc = 2, max.nc = 6, method = "kmeans")
+  
+  # Retorna el número óptimo de clusters sugerido
+  return(result)
 }
 ```
 
@@ -542,6 +556,11 @@ print_clustering_results <- function(df_with_clusters, data_for_cluster, columns
 
 ```{r}
 compare_k(data_for_cluster_academic)
+```
+
+```{r}
+optimal_clusters_academic <- find_optimal_clusters(data_for_cluster_academic)
+
 ```
 
 Analizando las gráficas del método del Codo (Elbow Method) y del Coeficiente de Silhouette, llegamos a la conclusión de que el número óptimo de clústeres es 𝑘 = 2 k=2.
@@ -552,7 +571,9 @@ Esta conclusión se fundamenta en dos aspectos clave:
 
 **Coeficiente de Silhouette (Silhouette Method)**: Este método mide la calidad de la agrupación en función de la cohesión interna y la separación entre clústeres. En la gráfica correspondiente, el valor más alto del coeficiente de Silhouette se encuentra en 𝑘 = 2 k=2, lo que indica que, con este número de clústeres, los grupos están bien diferenciados y los puntos dentro de cada clúster son más homogéneos.
 
-Dado que ambos métodos coinciden en que 𝑘 = 2 k=2 es el valor óptimo, podemos concluir que dividir los datos en dos grupos proporciona una segmentación adecuada, asegurando un equilibrio entre la reducción de la variabilidad interna y la claridad en la separación entre clústeres.
+Basándonos en la evaluación de múltiples criterios de clustering mediante `NbClust`, el número óptimo de clusters en los datos es **2**, ya que recibió la mayor cantidad de votos. Esto sugiere que los datos tienen dos grupos bien diferenciados, lo que puede ser validado adicionalmente con métricas como el índice de silueta o gráficos de PCA
+
+Dado que todos los métodos coinciden en que 𝑘 = 2 es el valor óptimo, podemos concluir que dividir los datos en dos grupos proporciona una segmentación adecuada, asegurando un equilibrio entre la reducción de la variabilidad interna y la claridad en la separación entre clústeres.
 
 ```{r}
 df_cluster_academic <- applying_kmeans(data_for_cluster_academic, 2)
@@ -572,41 +593,34 @@ Por otro lado, los alumnos del Clúster 2 no solo estudian menos, sino que tambi
 compare_k(data_for_cluster_support)
 ```
 
+```{r}
+optimal_clusters_support <- find_optimal_clusters(data_for_cluster_support)
+
+```
+
 La primera gráfica sigue el **método del codo**, el cual evalúa la suma de los cuadrados dentro de los clusters (WSS) en función del número de clusters. El punto óptimo se encuentra donde la disminución en WSS se vuelve menos pronunciada, formando un "codo" en la curva. En este caso, se observa un cambio notable en la pendiente alrededor de k=4 y k=8, lo que indica que estos valores podrían ser opciones razonables para segmentar los datos de manera eficiente.
 
 Por otro lado, la segunda gráfica utiliza el **método del Silhouette** para determinar el número óptimo de clusters. En este método, se elige el valor de k que maximiza el índice de silhouette, el cual mide qué tan bien separados están los clusters y qué tan cohesivos son. En la gráfica, el valor más alto de silhouette se alcanza en k=8, lo que sugiere que este número de clusters permite una mejor separación entre los grupos y minimiza la superposición entre ellos.
 
-En conclusión, aunque el método del codo sugiere que tanto k=4 como k=8 son buenas opciones, el método del Silhouette indica que k=8 ofrece la mejor separación entre clusters. Dado que un mayor índice de silhouette implica una mejor calidad de agrupación, la mejor elección en este caso es k=8, ya que maximiza la cohesión dentro de los grupos y la separación entre ellos.
+Basándonos en la evaluación de múltiples criterios de clustering mediante `NbClust`, el número óptimo de clusters en los datos es **4**, ya que recibió la mayor cantidad de votos. Esto sugiere que los datos tienen cuatro grupos bien diferenciados, lo que puede ser validado adicionalmente con métricas como el índice de silueta o gráficos de PCA
+
+En conclusión, aunque el método del codo sugiere que tanto k=4 como k=8 son buenas opciones, el método de Silhouette indica que k=8 ofrece la mejor separación entre clusters. Sin embargo, al aplicar el método de múltiples criterios, k=4 obtuvo la mayor cantidad de votos, superando a las demás opciones por 15 votos. Dado que tanto el método del codo como el de múltiples criterios coinciden en k=4, tomamos esta opción como la más adecuada para el clustering.
 
 ```{r}
-df_cluster_support <- applying_kmeans(data_for_cluster_support, 8)
+df_cluster_support <- applying_kmeans(data_for_cluster_support, 4)
 ```
 
 ```{r}
 print_clustering_results(df_cluster_support, data_for_cluster_support, support_columns)
 ```
 
-Tras analizar las distintas gráficas, se ha identificado que existen tres grupos de alumnos que presentan dificultades en el aprendizaje, los cuales se corresponden con los **clústeres 1, 6 y 8**. Esta identificación es crucial, ya que permite comprender qué características comparten estos grupos y qué factores podrían estar influyendo en su rendimiento académico.
+Tras analizar las distintas gráficas obtenidas en el estudio, se han identificado **tres grupos de alumnos** que no presentan dificultades en el aprendizaje, correspondientes a los **clústeres 1, 2 y 4**. Estos estudiantes no parecen experimentar problemas significativos en su rendimiento académico, lo que sugiere que sus hábitos y patrones de estudio pueden estar alineados con el éxito educativo.
 
-Si contrastamos esta información con la gráfica de asistencia a sesiones de tutoría, observamos un patrón interesante: de los tres clústeres con dificultades de aprendizaje, solo el **clúster 8** muestra una participación notable en las sesiones de tutoría, mientras que los **clústeres 1 y 6** apenas acumulan sesiones. Esto sugiere que, aunque la tutoría puede ser una herramienta clave para mejorar el aprendizaje, no todos los alumnos con dificultades la aprovechan por igual.
+Al comparar estos resultados con la **gráfica de sesiones de tutoría**, se observa que el **clúster 1** es el grupo que registra **más horas de tutoría**, lo que podría indicar un mayor interés o compromiso con el refuerzo académico. Por otro lado, los clústeres **2 y 4** presentan una cantidad similar de sesiones de tutoría, lo que sugiere que no requieren un apoyo adicional significativo. Sin embargo, el caso más preocupante se encuentra en el **clúster 3**, ya que **este grupo sí presenta problemas de aprendizaje, pero no asiste a tutorías**. Esta falta de apoyo podría estar contribuyendo a sus dificultades académicas, lo que sugiere la necesidad de intervenciones específicas para mejorar su desempeño.
 
-Otro punto destacable es la asistencia del **clúster 7** a las tutorías. A pesar de que este grupo no presenta problemas de aprendizaje, registra una frecuencia de asistencia superior a la de otros clústeres. Este dato podría indicar que los alumnos de este grupo buscan reforzar sus conocimientos de manera proactiva, lo que podría influir positivamente en su rendimiento.
+En cuanto al **acceso a recursos educativos**, la última gráfica revela que el **clúster 4 es el que más acceso tiene**, ocupando el rango más alto en su totalidad. Esto sugiere que estos alumnos disponen de herramientas adecuadas para su aprendizaje, lo que puede estar relacionado con su buen rendimiento. Los **clústeres 1 y 3** comparten un rango medio de acceso a recursos, aunque con variaciones entre casos de acceso bajo y alto, lo que indica cierta desigualdad en la disponibilidad de materiales. Finalmente, el **clúster 2 presenta el nivel más bajo de acceso a recursos**, lo que podría representar una barrera para su desarrollo académico a largo plazo.
 
-En cuanto al acceso a recursos, la mayoría de los alumnos posee un nivel medio como mínimo, lo que indica que, en general, los estudiantes cuentan con cierto grado de apoyo en términos de materiales y herramientas para el aprendizaje. No obstante, hay dos excepciones que vale la pena resaltar: el **clúster 4 y el clúster 5**.
-
-El **clúster 4** se distingue por tener un acceso a recursos significativamente bajo. Sin embargo, esto no parece afectar su rendimiento académico, ya que los alumnos de este grupo no presentan dificultades de aprendizaje y mantienen una asistencia media a las sesiones de tutoría. Este caso es meritorio, ya que sugiere que, a pesar de las limitaciones en el acceso a recursos, estos alumnos han logrado mantener un nivel de aprendizaje adecuado.
-
-Por otro lado, el **clúster 5** presenta una situación inversa: cuenta con un acceso a recursos considerablemente alto, lo que parece haber contribuido a que sus alumnos no experimenten dificultades en el aprendizaje. Esta observación refuerza la idea de que disponer de recursos suficientes puede ser un factor determinante en el rendimiento académico.
-
-En cuanto a los grupos con dificultades de aprendizaje (**clústeres 1, 6 y 8**), se aprecia que, en general, poseen un acceso a recursos de nivel medio, e incluso medio-alto en el caso del clúster 1. Esto indica que la disponibilidad de recursos no es un factor limitante para estos alumnos. Sin embargo, su baja participación en las sesiones de tutoría sugiere que no están tomando las medidas necesarias para abordar y superar sus dificultades de aprendizaje.
-
-El análisis de los datos sugiere que la asistencia a tutorías y el acceso a recursos juegan un papel importante en el desempeño académico de los estudiantes, aunque no son los únicos factores determinantes. Si bien el acceso a recursos puede favorecer el aprendizaje, no garantiza por sí solo un buen desempeño, como se evidencia en el caso del **clúster 1**, que cuenta con recursos pero sigue presentando dificultades.
-
-Asimismo, la asistencia a tutorías se perfila como una herramienta clave para mejorar el rendimiento académico, pero su impacto depende del grado de participación de los alumnos. El hecho de que el **clúster 8**, a pesar de sus dificultades, asista a tutorías con mayor frecuencia podría indicar un esfuerzo por mejorar, mientras que los **clústeres 1 y 6** parecen no aprovechar esta opción, lo que podría estar perpetuando sus problemas.
-
-Finalmente, la situación del **clúster 4** demuestra que, aunque el acceso a recursos sea bajo, un compromiso activo con el aprendizaje y una asistencia moderada a tutorías pueden ser suficientes para mantener un buen rendimiento académico. En contraste, el **clúster 5** refuerza la idea de que disponer de recursos puede contribuir a evitar problemas de aprendizaje.
-
-En conclusión, para mejorar el desempeño de los grupos con dificultades, sería recomendable fomentar una mayor participación en tutorías y analizar qué otros factores, además del acceso a recursos, podrían estar influyendo en su rendimiento. Implementar estrategias de motivación y seguimiento personalizado podría ser clave para ayudar a estos estudiantes a superar sus dificultades.
+El análisis de los datos ha permitido identificar patrones significativos en el aprendizaje de los alumnos y su relación con las tutorías y el acceso a recursos. Se destaca que el **clúster 3 requiere especial atención**, ya que, a pesar de sus dificultades, **no participa en tutorías**, lo que podría agravar sus problemas. Además, el acceso desigual a recursos educativos podría estar influyendo en el rendimiento de algunos grupos. Estos hallazgos sugieren la importancia de fomentar el uso de tutorías en estudiantes con dificultades y garantizar un acceso equitativo a los recursos educativos para mejorar la calidad del aprendizaje.
 
 #### Resources
 
@@ -614,31 +628,35 @@ En conclusión, para mejorar el desempeño de los grupos con dificultades, serí
 compare_k(data_for_cluster_resource)
 ```
 
+```{r}
+optimal_clusters_resources <- find_optimal_clusters(data_for_cluster_resource)
+```
+
 En la primera imagen, correspondiente al **método de Elbow**, se representa la suma de los cuadrados dentro del cluster (*Total Within Sum of Squares, WSS*) en función del número de clusters (*k*). Este método se basa en encontrar el punto donde la disminución de WSS empieza a desacelerarse de manera significativa, formando una especie de “codo” en la gráfica. En este caso, observamos que la curva muestra una reducción brusca hasta aproximadamente *k = 8*, después de lo cual la disminución de WSS se vuelve menos pronunciada. Esto sugiere que *k = 8* es un buen candidato para el número óptimo de clusters, ya que más allá de este punto la ganancia en términos de reducción de varianza dentro de los clusters es menor.
 
 Por otro lado, en la segunda imagen se muestra el resultado del **método de Silhouette**, el cual mide la calidad de la agrupación en función de la cohesión interna y la separación entre los clusters. El objetivo es encontrar el valor de *k* que maximiza el ancho promedio del coeficiente de silueta, lo que indica que los puntos están bien agrupados dentro de sus respectivos clusters y bien separados de otros clusters. En esta gráfica, el valor más alto del coeficiente de silueta se observa en *k = 2*, lo que sugiere que dos clusters proporcionan la mejor separación según este criterio. Sin embargo, también se observa un valor elevado en *k = 8*, lo que indica que esta cantidad de clusters también es una opción viable.
 
-Dado que ambos métodos ofrecen sugerencias distintas, la elección del número óptimo de clusters depende del equilibrio entre la reducción de la varianza dentro de los grupos y la cohesión de los mismos. Si se busca una segmentación más detallada y precisa de los datos, *k = 8* parece ser la mejor opción, ya que proporciona un balance entre la reducción de la suma de cuadrados dentro del cluster y una separación aceptable según el coeficiente de silueta. Por otro lado, si se prefiere una agrupación más general y bien diferenciada, *k = 2* podría ser una alternativa adecuada. No obstante, basándonos en ambos métodos y considerando un compromiso entre variabilidad y cohesión, *k = 8* se perfila como la opción más recomendada.
+Basándonos en la evaluación de múltiples criterios de clustering mediante `NbClust`, el número óptimo de clusters en los datos es **4**, ya que recibió la mayor cantidad de votos. Esto sugiere que los datos tienen cuatro grupos bien diferenciados, lo que puede ser validado adicionalmente con métricas como el índice de silueta o gráficos de PCA
+
+El análisis de los diferentes métodos de clustering muestra resultados variados sobre la cantidad óptima de clusters. El método de **Elbow** sugiere que **k = 8** es una buena opción, ya que a partir de este punto la reducción de la varianza dentro de los clusters se desacelera significativamente. Por otro lado, el **método de Silhouette** indica que **k = 2** proporciona la mejor separación entre clusters, aunque también destaca **k = 8** como una alternativa viable. Sin embargo, el método de múltiples criterios de **NbClust** señala que **k = 4** es la mejor opción al haber recibido la mayor cantidad de votos, lo que sugiere la existencia de cuatro grupos bien diferenciados en los datos. Dado que NbClust integra varios enfoques de validación, se considera **k = 4** como el número óptimo de clusters, aunque los valores **k = 2 y k = 8** también pueden ser opciones a considerar dependiendo del criterio de segmentación que se priorice.
 
 ```{r}
-df_cluster_resource <- applying_kmeans(data_for_cluster_resource, 8)
+df_cluster_resource <- applying_kmeans(data_for_cluster_resource, 4)
 ```
 
 ```{r}
 print_clustering_results(df_cluster_resource, data_for_cluster_resource, resource_columns)
 ```
 
-El análisis de la primera gráfica, correspondiente a los ingresos familiares, revela diversas situaciones significativas dentro de los clústeres analizados. En términos generales, la mayoría de los clústeres presentan ingresos de nivel medio. Sin embargo, algunos grupos muestran desviaciones importantes. En particular, **los clústeres 1, 3 y 6** tienden hacia ingresos medio-bajos, mientras que los **clústeres 2 y 7** presentan ingresos *medio-altos*. Existen, además, dos casos extremos que resultan especialmente destacables: **el clúster 4**, que cuenta con los ingresos familiares más altos, y **el clúster 5**, cuyos ingresos son los más bajos dentro del conjunto de datos analizado.
+El análisis de la primera gráfica, correspondiente a los **ingresos familiares**, revela diversas diferencias entre los clústeres analizados. En términos generales, la mayoría de los grupos presentan ingresos de nivel medio, aunque existen algunas desviaciones significativas que reflejan desigualdades económicas dentro del conjunto de datos. En particular, los **clústeres 2 y 3** se sitúan dentro del rango de ingresos medios, pero con ciertas diferencias notables. El **clúster 2** muestra una mayor presencia de usuarios con ingresos **medios-bajos**, mientras que el **clúster 3** se inclina levemente hacia los **ingresos medios-altos**, aunque sin una diferencia muy pronunciada. En el caso del **clúster 1**, se observa una tendencia hacia ingresos **medios en su mayoría al alza**, sin presencia destacada de ingresos bajos. Sin embargo, el grupo con la situación económica más delicada es el **clúster 4**, que se distingue por presentar **ingresos íntegramente bajos** en comparación con los demás grupos.
 
-Si comparamos esta información con la gráfica de acceso a recursos, se pueden extraer relaciones interesantes entre el nivel de ingresos y la disponibilidad de materiales y herramientas de apoyo educativo. Para los clústeres con *ingresos medio-bajos* (**1, 3 y 6**), se observa que los **clústeres 3 y 6** cuentan con un acceso a recursos dentro del rango normal, mientras que el **clúster 1** presenta un acceso a recursos *muy bajo*, lo que podría estar afectando su desempeño académico.
+Al relacionar estos hallazgos con la segunda gráfica, correspondiente al **acceso a recursos**, se observa que la mayoría de los clústeres tienen valores medios similares en cuanto a disponibilidad de recursos educativos. No obstante, existen algunas fluctuaciones, con ciertos casos que se inclinan hacia un acceso más limitado o, en otros, con mayores facilidades. Un hallazgo relevante es que, a pesar de que el **clúster 4** presenta los ingresos más bajos, su acceso a recursos no es significativamente menor, lo que sugiere la existencia de **programas de ayuda o becas** que compensan la falta de recursos económicos. Esto indica que, aunque las familias de este grupo tengan menos ingresos, han podido acceder a apoyos que mitigan las desigualdades.
 
-Por otro lado, los clústeres con ingresos medio-altos reflejan tendencias distintas. Mientras que el **clúster 2** mantiene un acceso a recursos de nivel medio, lo cual es coherente con su nivel de ingresos, el **clúster 7** sobresale al presentar un acceso a recursos significativamente alto. Este último caso podría estar indicando que, además de contar con ingresos favorables, este grupo de alumnos dispone de un entorno familiar que prioriza el acceso a herramientas educativas, ya sea por inversión directa o por una mayor conciencia sobre la importancia de estos recursos en el proceso de aprendizaje.
+En lo que respecta al **acceso a internet**, se evidencia que el **clúster 2** es el único grupo que presenta un valor negativo, es decir, una menor accesibilidad a la conectividad en comparación con el resto. Este dato plantea dos hipótesis posibles: una primera explicación sería que estas familias **no pueden permitirse el acceso a internet** debido a razones económicas; sin embargo, esta teoría resulta inconsistente si consideramos que el **clúster 4**, que cuenta con los ingresos más bajos, sí tiene acceso a internet. Por lo tanto, una hipótesis más plausible es que en el **clúster 2 las familias han restringido el uso de internet a sus hijos por decisión propia**, probablemente por razones educativas, de control parental o de valores familiares.
 
-En cuanto a los clústeres más extremos en términos de ingresos, también presentan situaciones particulares en relación con el acceso a recursos. **El clúster 4**, que cuenta con los ingresos más altos, dispone de acceso a recursos en un *nivel medio-alto*, lo que podría explicarse por inversiones en educación, ayudas gubernamentales o políticas institucionales de apoyo. En contraste, **el clúster 5**, a pesar de ser el de menores ingresos, cuenta con acceso a recursos medio-alto, lo que resulta llamativo. Esto podría indicar la presencia de programas de asistencia, becas o estrategias familiares específicas para garantizar el acceso a herramientas educativas a pesar de las limitaciones económicas.
+En cuanto al **nivel académico de los padres**, se observa que, en términos generales, la mayoría de los grupos presentan un nivel de educación secundaria. No obstante, existen diferencias entre los clústeres. El **clúster 1** se caracteriza por estar compuesto en su totalidad por padres con educación **secundaria**. El **clúster 2** también presenta una mayoría con educación secundaria, aunque con la particularidad de que algunos padres han alcanzado estudios **universitarios y de posgrado**. Por otro lado, el **clúster 4** cuenta principalmente con familias con formación en **educación secundaria y grados universitarios**, aunque sin un predominio de estudios avanzados. La situación más particular se encuentra en el **clúster 3**, donde los padres presentan un nivel de estudios **mínimo de grado universitario**, y en algunos casos, **estudios de posgrado**, lo que indica un nivel académico superior en comparación con el resto de los grupos.
 
-Pasando al análisis de la gráfica sobre acceso a internet, se observan discrepancias relevantes. Mientras que la mayoría de los clústeres tienen acceso a internet, hay tres excepciones notables: **los clústeres 1, 3 y 4** no cuentan con acceso, lo que podría atribuirse a diversas razones. En algunos casos, esto podría estar vinculado a factores económicos, lo que contrastaría con la situación del **clúster 4**, cuyos ingresos son altos. Este último caso sugiere que la falta de acceso a internet podría deberse a razones ajenas a lo económico, como restricciones parentales o decisiones personales dentro del hogar. En familias con hijos menores, es posible que los padres restrinjan el acceso a internet como medida de control o protección, lo que podría estar limitando las oportunidades de aprendizaje de los estudiantes en entornos digitales.
-
-Finalmente, la última gráfica analiza el nivel educativo de los padres, y aquí se aprecia una distribución bastante equilibrada. En general, la mayoría de los grupos cuentan con padres que han alcanzado al menos el nivel de graduado de instituto, mientras que un porcentaje menor ha accedido a estudios universitarios o de postgrado. Sin embargo, hay un caso particular que sobresale: el **clúster 7**. En este grupo, los padres de los alumnos tienen un nivel educativo significativamente más alto que en los demás clústeres, ya que, como mínimo, cuentan con un título universitario y, en muchos casos, poseen estudios de postgrado. Esta variable podría estar incidiendo en el mayor acceso a recursos y la participación activa en el proceso educativo de los alumnos de este clúster.
+El análisis realizado revela importantes diferencias socioeconómicas entre los clústeres analizados. Se ha identificado que el **clúster 4** es el grupo con menores ingresos, pero gracias a algún tipo de apoyo externo, ha podido mantener un acceso a recursos educativos similar al de los otros grupos. En cuanto a la **conectividad a internet**, el **clúster 2** es el único que presenta restricciones, lo que sugiere que la limitación se debe más a una decisión parental que a factores económicos. Respecto al **nivel educativo de los padres**, se observa que la mayoría han alcanzado la educación secundaria, aunque el **clúster 3 destaca por contar con padres con estudios universitarios y de posgrado en mayor proporción**. Estas diferencias pueden influir en el rendimiento académico y el acceso a oportunidades de aprendizaje, lo que subraya la importancia de analizar estos factores para diseñar estrategias de apoyo adecuadas para cada grupo.
 
 #### Social
 
@@ -646,27 +664,54 @@ Finalmente, la última gráfica analiza el nivel educativo de los padres, y aqu�
 compare_k(data_for_cluster_extra)
 ```
 
-Para determinar el número óptimo de clusters k, se han utilizado dos métodos: el método del codo y el método del silhouette. En el gráfico del método del codo, se observa que la "Suma de Cuadrados Dentro del Grupo" disminuye considerablemente hasta aproximadamente k=3 o k=4, donde la pendiente empieza a estabilizarse, indicando que agregar más clusters genera una menor ganancia en la reducción de la variabilidad dentro de los grupos. Por otro lado, en el gráfico del método del silhouette, el valor máximo de la "Anchura Promedia del Silhouette" se alcanza en k=10, aunque otros valores como k=8 y k=3 también presentan valores relativamente altos, lo que sugiere que estos números de clusters permiten una mejor separación entre los grupos. Dado que el método del codo sugiere un k óptimo de 3 o 4, y el método del silhouette indica que k=10 maximiza la cohesión y separación entre los clusters, pero también muestra un buen desempeño en k=3, se puede concluir que un valor razonable y equilibrado para k sería **3 o 4**, ya que logra un buen compromiso entre simplicidad del modelo y calidad de la segmentación.
+```{r}
+optimal_clusters_extra <- find_optimal_clusters(data_for_cluster_extra)
+```
+
+En el gráfico del **método del codo**, se observa que la "Suma de Cuadrados Dentro del Grupo" (**WSS**) disminuye considerablemente hasta aproximadamente k=3, k=4, momento en el cual la pendiente comienza a estabilizarse. Esto indica que a partir de estos valores, agregar más clusters genera una menor ganancia en la reducción de la variabilidad dentro de los grupos, sugiriendo que k=3 o k=4 son opciones razonables.
+
+Por otro lado, el **método del silhouette** muestra que la mejor cohesión interna y separación entre los clusters se obtiene con k=2, lo que sugiere que dividir los datos en dos grupos maximiza la calidad de la segmentación.
+
+Adicionalmente, el **análisis de múltiples criterios** también ha indicado que el número óptimo de clusters es k=2, ya que ha recibido la mayor cantidad de votos (**8 votos**), superando a k=3 y k=4, que han obtenido **5 votos** cada uno.
+
+Los tres enfoques utilizados coinciden en que k=2 es la opción más sólida para la segmentación de los datos. Tanto el método del silhouette como el análisis de múltiples criterios refuerzan esta elección, indicando que dividir los datos en dos grupos proporciona la mejor cohesión y separación entre clusters. Aunque el método del codo sugería que k=3 o k=4 podrían ser alternativas razonables, la evidencia general respalda la elección de k=2 como el número óptimo de clusters en este caso.
 
 ```{r}
-df_cluster_extra <- applying_kmeans(data_for_cluster_extra, 3)
+df_cluster_extra <- applying_kmeans(data_for_cluster_extra, 2)
+
 ```
 
 ```{r}
 print_clustering_results(df_cluster_extra, data_for_cluster_extra, extra_columns)
 ```
 
-El análisis de los gráficos permite identificar diversos patrones en la relación entre la realización de actividades extracurriculares, la cantidad de horas dedicadas a la actividad física y la influencia que ejercen los compañeros sobre los alumnos.
+El análisis de los gráficos permite identificar distintos patrones en la relación entre la participación en **actividades extracurriculares**, la cantidad de **horas dedicadas a la actividad física** y la **influencia de los compañeros** en los alumnos. A través de la observación de estos datos, se pueden extraer conclusiones relevantes sobre cómo estas variables se relacionan entre sí y si tienen algún impacto en la vida social y académica de los estudiantes.
 
-El primer gráfico examina la participación de los estudiantes en actividades extracurriculares, dividiendo a los alumnos en tres categorías bien diferenciadas. En primer lugar, se encuentra el grupo de estudiantes que no realiza ninguna actividad extracurricular. En segundo lugar, aquellos que sí participan activamente en este tipo de actividades. Finalmente, el tercer grupo está compuesto por alumnos que presentan una situación mixta, es decir, donde algunos realizan actividades extracurriculares y otros no. Esta distribución es clave para comprender cómo la participación en actividades complementarias puede influir en otros aspectos del desarrollo de los estudiantes.
+En el primer gráfico, correspondiente a la **realización de actividades extracurriculares**, se observa una diferencia clara entre los dos clústeres analizados. El **clúster 1** agrupa a aquellos alumnos que **no participan en actividades extraescolares**, mientras que el **clúster 2** representa a los estudiantes que sí realizan este tipo de actividades. Esta segmentación permite identificar una distinción clara en los hábitos de los alumnos con respecto a su tiempo fuera del entorno académico, lo que podría tener implicaciones en otros aspectos de su desarrollo personal y social.
 
-Si contrastamos esta información con el segundo gráfico, que analiza la cantidad de horas dedicadas a la actividad física, observamos que **los tres clústeres** presentan un comportamiento similar. Es decir, independientemente de si los alumnos participan o no en actividades extracurriculares, la distribución de horas dedicadas a la actividad física sigue un patrón homogéneo. En todos los casos, se encuentran alumnos que realizan entre una y cinco horas semanales de ejercicio físico. Este hallazgo sugiere que la actividad física no está necesariamente condicionada por la participación en actividades extracurriculares, sino que puede depender de otros factores como la rutina personal, el interés individual o las políticas escolares que fomenten la práctica deportiva.
+En lo que respecta al **rango de horas dedicadas a la actividad física**, se observa que ambos clústeres presentan una distribución similar. Esto indica que la participación o no en actividades extracurriculares no tiene un impacto significativo en el tiempo que los estudiantes dedican a la práctica de ejercicio físico. Es decir, tanto los alumnos que realizan actividades extraescolares como los que no lo hacen mantienen hábitos de actividad física similares, lo que sugiere que otros factores, como la rutina diaria o el estilo de vida familiar, podrían ser más determinantes en este aspecto.
 
-El tercer gráfico aporta información relevante sobre la influencia del compañerismo en la vida de los estudiantes. En este caso, se observa un resultado llamativo: tanto los alumnos que no realizan actividades extracurriculares como aquellos que sí lo hacen presentan niveles de influencia social similares, caracterizados por una influencia de los compañeros calificada como "normal-alta". Esto indica que, independientemente de su participación en actividades fuera del horario escolar, los estudiantes suelen verse influenciados por su grupo de pares en niveles similares.
+Por último, el análisis de la **influencia de los compañeros** muestra que ambos clústeres presentan una distribución equivalente en esta variable. Esto implica que la **realización de actividades extracurriculares no tiene un impacto significativo en el nivel de influencia que los compañeros ejercen sobre los estudiantes**. En otras palabras, la socialización y las dinámicas de grupo parecen mantenerse estables independientemente de si el alumno participa o no en actividades extracurriculares.
 
-Sin embargo, la situación cambia cuando se analiza **el tercer grupo**, conformado por aquellos estudiantes que pertenecen a un clúster mixto, es decir, donde algunos compañeros participan en actividades extracurriculares y otros no. En este caso, se detecta que la influencia del compañerismo es nula. Este resultado sugiere que en entornos donde coexisten ambos perfiles de alumnos, la dinámica social es distinta y el efecto del grupo no ejerce un impacto significativo en las decisiones individuales de los estudiantes.
+El análisis realizado revela que la participación en **actividades extracurriculares** es una característica diferenciadora entre los clústeres, pero no parece influir en otras variables como la **cantidad de horas dedicadas a la actividad física** ni en el **nivel de influencia de los compañeros**. La similitud en la distribución de estas últimas variables sugiere que la actividad extracurricular no es un factor determinante en los hábitos de ejercicio ni en la socialización de los alumnos. Por lo tanto, la decisión de realizar o no actividades extracurriculares podría estar más relacionada con factores personales o familiares que con un impacto significativo en la vida social o los hábitos de los estudiantes.
 
-El análisis de estos datos permite extraer algunas conclusiones importantes. En primer lugar, la realización de actividades extracurriculares no parece tener un impacto directo en la cantidad de horas dedicadas a la actividad física, ya que los tres grupos analizados presentan una distribución similar en este aspecto. En segundo lugar, la influencia del compañerismo es notablemente alta en los estudiantes que pertenecen a grupos homogéneos (ya sea que todos realicen o no actividades extracurriculares). Sin embargo, en los grupos mixtos, donde algunos alumnos participan y otros no, la influencia de los compañeros es prácticamente inexistente. Esto podría indicar que la cohesión del grupo y la uniformidad en las actividades desempeñadas juegan un papel clave en la construcción de la identidad colectiva y en la capacidad de los compañeros para influir en las decisiones individuales.
+#### General
+
+```{r}
+compare_k(data_for_cluster_extra)
+```
+
+```{r}
+optimal_clusters_extra <- find_optimal_clusters(data_for_cluster_extra)
+```
+
+```{r}
+df_cluster_extra <- applying_kmeans(data_for_cluster_extra, 2)
+```
+
+```{r}
+print_clustering_results(df_cluster_extra, data_for_cluster_extra, extra_columns)
+```
 
 ### ¿Cuántas horas de trabajo personal necesita un estudiante para obtener una alta calificación?
 
