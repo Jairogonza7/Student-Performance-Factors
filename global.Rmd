@@ -1,7 +1,18 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "Students Performance Factors"
+author: 
+  - "Jairo González Hernández"
+  - "Mathis Goujon"
+  - "Claudia Teresa Heredia Ceballos"
+  - "Pedro López Ruz"
+  - "José Antonio Medina García"
 ---
+
+# Students Performance Factors
+
+**Trabajo Final Data Science**
+
+*Master en Ingeniería del Software: Cloud, Datos y Gestión de TI*
 
 ## Descripción del dominio
 
@@ -31,7 +42,7 @@ En particular, nos gustaría subrayar que el rendimiento académico no depende �
 
 En el grupo de desarrollo de este trabajo, nos encontramos tanto estudiantes de **Ingeniería Informática** como de **Ingeniería de la Salud**. Esta diversidad de perspectivas y formaciones académicas enriquece el enfoque del estudio, ya que, desde distintas disciplinas, reconocemos la importancia de crear un entorno educativo que no solo se base en el rendimiento académico, sino también en el bienestar y las capacidades individuales de cada estudiante. Al ser nosotros mismos estudiantes, sabemos de primera mano que las aulas son cada vez más diversas, y entender cómo organizar y distribuir a los estudiantes de acuerdo con sus necesidades específicas es clave para optimizar su rendimiento.
 
-### **Importancia local/nacional y en el contexto actual**
+### Importancia local/nacional y en el contexto actual
 
 A nivel global, la educación es un pilar fundamental para el desarrollo. Países con bajos índices de rendimiento académico suelen enfrentar mayores desafíos económicos y sociales. Además, en un contexto postpandemia, donde la enseñanza a distancia ha cambiado la forma en que los estudiantes aprenden, es más importante que nunca entender qué factores afectan su desempeño y cómo pueden optimizarse los procesos de enseñanza.
 
@@ -61,31 +72,35 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car", "ggridges", "factoextra", "cluster", "NbClust")
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car", "ggridges", "factoextra", "cluster", "NbClust", "RColorBrewer")
 ipak(packages)
 ```
 
 ## Exploración de datos
 
+Antes de realizar cualquier análisis, es fundamental explorar el conjunto de datos para comprender la estructura de los mismos, identificar posibles inconsistencias y verificar la presencia de valores faltantes. En esta sección, realizamos una inspección inicial del dataset.
+
 ### Lectura de los datos
+
+Cargamos el dataset desde el archivo CSV y verificamos su correcta importación:
 
 ```{r}
 data <- read.csv("data/StudentPerformanceFactors.csv", header=TRUE)
 ```
 
-### Visualizar las 6 primeras instancias del data frame
+A continuación, se presentan las primeras seis filas del conjunto de datos para obtener una vista preliminar de su estructura y los valores de las variables.
 
 ```{r}
 head(data)
 ```
 
-### Estructura resumida del data frame
+Vamos a examinar la estructura del conjunto de datos para obtener un resumen de las variables presentes, su tipo de dato y una visión general de cómo están organizados los datos.
 
 ```{r}
 str(data)
 ```
 
-El dataset está compuesto por 6,607 filas y 20 columnas, las cuales incluyen atributos de distintos tipos: numéricos, categóricos y booleanos.
+El dataset está compuesto por **6,607 filas** y **20 columnas**, las cuales incluyen atributos de distintos tipos: *numéricos*, *categóricos* y *booleanos*.
 
 A continuación, se describen algunos de estos atributos:
 
@@ -129,9 +144,9 @@ A continuación, se describen algunos de estos atributos:
 
 -   **Exam_Score**: Calificación del examen final.
 
-## Preprocesamiento de los datos
+### Revisión de los datos
 
-Esta función muestra las filas con valores NA o valores vacios("").
+A continuación, vamos a observar si existen valores faltantes, erróneos o inconsistentes en el conjunto de datos. Utilizaremos una función que identifica las filas con valores NA o vacíos ("") en cada columna, lo que nos permitirá tener un panorama de los datos.
 
 ```{r}
 detect_missing_data <- function(df) {
@@ -153,7 +168,100 @@ En el resultado arrojado por la función podemos observar que no existen valores
 
 Al sumar el total de valores faltantes podemos observar que puede haber un máximo de **235 filas** con algún valor faltante. Esto supone aproximadamente el **3.56%** del total de filas del conjunto de datos.
 
-Dado que la proporción de filas con valores faltantes es relativamente baja, consideramos eliminar estas instancias ya que creemos que no tendrá un impacto significativo en la integridad general del dataset.
+### Análisis descriptivo
+
+#### Variables numéricas
+
+En esta sección, vamos a calcular las **medidas estadísticas básicas** para las variables numéricas, tales como la *media*, *mediana*, *desviación estándar*, y otros estadísticos relevantes. También calcularemos las frecuencias de las variables categóricas para entender mejor la distribución de los datos.
+
+```{r}
+# Resumen estadístico de las variables numéricas
+numeric_vars <- sapply(data, is.numeric)  
+data_numeric <- data[, numeric_vars]
+summary(data_numeric)
+```
+
+**Observaciones**
+
+-   La mayoría de los estudiantes estudian entre **16 y 24 horas a la semana**, con una distribución bastante centrada en la media y la mediana. Sin embargo, se observa que el *máximo de 44 horas* indica la presencia de algunos estudiantes que estudian significativamente más.
+
+-   La **asistencia (Attendance)** tiende a ser **alta**, con el 50% de los estudiantes asistiendo al menos 80% de las clases. Sin embargo, **hay alumnos con asistencia más baja (60%)**, aunque no encontramos a ningún alumno que no asista al menos a la mitad de las clases.
+
+-   La mayoría de los estudiantes duermen entre **6 y 8 horas**, aunque hay algunos casos que duermen solo 4 horas, lo que podría afectar su rendimiento académico.
+
+-   La **distribución de calificaciones previas está equilibrada**, con la mediana y la media relativamente cercanas. Sin embargo, hay estudiantes con puntajes significativamente más bajos (50), lo que podría indicar dificultades académicas previas.
+
+-   La mayoría de los estudiantes asisten a **1 o 2 sesiones de tutoría al mes**, pero también hay quienes no reciben ninguna tutoría. Respecto a la actividad física, la mayoría de los estudiantes realizan entre 2 y 4 horas, aunque algunos no hacen ninguna actividad, lo que podría impactar su salud y concentración.
+
+-   Respecto a **la calificación final del exámen**, la media y la mediana están alineadas, lo que indica una **distribución simétrica**. La mayoría de los estudiantes obtienen calificaciones **entre 65 y 69**; sin embargo, algunos alcanzan hasta 101, lo que podría deberse a un posible error en los datos o a un estudiante destacado que, gracias a una bonificación adicional, supera la calificación máxima establecida.
+
+Estas conclusiones nos van a orientar sobre los próximos pasos en el preprocesamiento de datos, como identificar grupos de estudiantes con distintos patrones de estudio, asistencia y tutorías. Además, va a ser clave analizar posibles outliers, como la calificación de 101 en el examen final, para determinar si se trata de un error o una excepción justificable.
+
+A continuación calculamos la *desviación estándar* y la *varianza*, lo cual nos da una idea de la dispersión de los datos con los que vamos a trabajar.
+
+```{r}
+# Desviación estándar
+desviacion_estandar <- sapply(data_numeric, sd)
+desviacion_estandar
+```
+
+```{r}
+# varianza
+varianza <- sapply(data_numeric, var)
+varianza
+```
+
+**Conclusiones**
+
+-   **Variables con alta variabilidad**: `Attendance` y `Previous_Scores` tienen las varianzas más altas, lo que sugiere que hay *grandes diferencias* entre los estudiantes en términos de asistencia y calificaciones previas. Con esta información, podríamos analizar si la variabilidad en Attendance y Previous_Scores impacta directamente en el Exam_Score.
+
+-   **Variables con baja variabilidad**: `Sleep_Hours`, `Tutoring_Sessions`, `Physical_Activity` muestran desviaciones estándar más bajas, lo que indica que la mayoría de los estudiantes tienen *comportamientos similares en estos aspectos*. Es decir, suelen dormir las mismas horas, realizar rutinas de ejercicio similares y sesiones de tutoría parecidas. Por lo que se puede llegar a la conclusión de que estos factores pueden no diferenciar mucho a los estudiantes en términos de rendimiento.
+
+-   **Exam_Score vs Previous_Scores**: *Previous Scores tiene una variabilidad significativamente mayor a Exam_Score* (14.40 vs. 3.89 en desviación estándar), lo que sugiere que las calificaciones en el examen final están más concentradas alrededor de un valor central en comparación con las calificaciones anteriores.
+
+-   Respecto a **Hours_Studied**, su varianza de *35.89* indica una alta dispersión, lo que puede significar que los estudiantes tienen *hábitos de estudio muy variados*. Algunos dedican muchas horas a estudiar, mientras que otros apenas lo hacen. Por ello, puede que el tiempo de estudio sea un factor muy variable y determinante en el rendimiento académico.
+
+#### Variables categóricas
+
+Para las variables categóricas, vamos a calcular las *frecuencias y proporciones de cada categoría* de modo que podamos observar la distribución de las diferentes categorías dentro de cada variable. Para ello, primero seleccionamos las variables categóricas y luego hacemos uso de la función `table()` y `prop.table()` para obtener la distribución de cada una.
+
+```{r}
+data <- data %>%
+  mutate(across(where(is.character), as.factor))
+categorical_vars <- sapply(data, is.factor) 
+data_categoric <- data[, categorical_vars] # Filtrar solo variables categóricas
+```
+
+```{r}
+# Obtener frecuencias absolutas
+frecuencias <- lapply(data_categoric, table)
+frecuencias
+```
+
+Algunas de las observaciones obtenidas son las siguientes:
+
+-   **Parental Involvement**, **Teacher Quality** y **Motivation Level**: La mayoría de los estudiantes tienen un nivel medio (seguido de nivel bajo) de involucramiento familiar, motivación, y calidad docente, lo cual podría indicar áreas clave para intervenir en el proceso educativo.
+
+-   **Internet_Access**, **Extracurricular_Activities**, y **Access_To_Recourses**: Las variables relacionadas con el acceso a recursos muestran una distribución relativamente equilibrada, lo que podría ser positivo para el acceso equitativo a la educación.
+
+-   La distribución de **Family_Income** (ingresos familiares) muestra una ligera mayoría de estudiantes provenientes de familias con ingresos bajos (2672), seguida de familias con ingresos medios (2666), y una menor representación de familias con ingresos altos (1269). Además, la mayoría de los estudiantes asiste a escuelas públicas (4598), con un número considerable en escuelas privadas (2009). Estas diferencias de las variables sugieren que el contexto socioeconómico podría influir en la experiencia educativa de los estudiantes.
+
+-   **Learning disabilities**: La mayoría de los estudiantes no tiene discapacidades de aprendizaje (5912), mientras que una fracción pequeña sí las tiene (695).
+
+- **Peer Influence**: La influencia neutral de los compañeros parece ser la más común (2592), seguida de positiva (2638) y negativa (1377). La influencia de los compañeros es *predominantemente positiva o neutral*, lo que puede indicar que los estudiantes se ven generalmente influenciados de manera favorable.
+
+De forma complementaria, se muestran las proporciones de cada categoría dentro de las variables categóricas del conjunto de datos.
+
+```{r}
+# Obtener proporciones relativas
+proporciones <- lapply(data_categoric, function(x) prop.table(table(x)))
+proporciones
+```
+En el apartado de visualización de los datos se explorarán más a fondo estas distribuciones y relaciones, lo que permitirá tener una comprensión más clara y detallada de los patrones en el conjunto de datos.
+
+## Preprocesamiento de datos
+
+Durante la exploración de los datos, hemos identificado que existen filas con valores faltantes. Dado que la proporción de instancias con valores faltantes es relativamente baja, hemos decidido **eliminar estas filas**. Consideramos que su eliminación no afectará de manera significativa la integridad general del conjunto de datos, permitiéndonos continuar con el análisis sin introducir sesgos o inconsistencias.
 
 ```{r}
 clean_missing_data <- function(df) {
@@ -175,6 +283,8 @@ Observamos que se han eliminado 229 filas por lo que el dataset sin ningún valo
 
 ### Detección de outliers
 
+Antes de desarrollar modelos predictivos, es crucial identificar los valores atípicos. Para ello, empleamos el **método del rango intercuartil (IQR)**, que nos permite detectar valores extremos en las variables numéricas, evaluar su impacto en el análisis y determinar posibles tratamientos.
+
 ```{r}
 numeric_cols <- sapply(data, is.numeric)
 
@@ -194,7 +304,7 @@ for (col_name in names(data)[numeric_cols]) {
 }
 ```
 
-Podemos observar que existen outliers en las variables `Hours_studies`, `Tutoring_Sessions` y `Exam_Score`. Vamos a visualizar dichos valores mediante gráficos de caja para observar la distribución de ciertos valores.
+Podemos observar que existen outliers en las variables `Hours_studies`, `Tutoring_Sessions` y `Exam_Score`. Para analizarlos mejor, utilizaremos gráficos de caja o boxplots que nos permitirán visualizar su distribución.
 
 ```{r}
 plot_boxplots <- function(df) {
@@ -222,9 +332,11 @@ plot_boxplots <- function(df) {
 plot_boxplots(data)
 ```
 
-Al observar los gráficos de caja, podemos identificar la presencia de valores atípicos. Sin embargo, algunos de estos valores no deben considerarse como tales. Por ejemplo, 8 horas de tutorías es un valor completamente válido. En cambio, en el gráfico de `Exam_Scores`, se pueden notar calificaciones que superan el valor máximo permitido de 100, lo que indica un posible error en los datos.
+Al observar los gráficos de caja, podemos identificar la presencia de valores atípicos. Sin embargo, no todos estos valores deberían considerarse como anomalías.
 
-Para solucionar esto, filtraremos las filas en las que el valor de `Exam_Score` sea superior a 100 y lo estableceremos a la máxima nota posible, es decir, 100.
+En el caso de la variable `tutoring_sessions`, los valores entre 4 y 8 se marcan como atípicos, aunque representan un rango perfectamente válido de horas de tutoría. De manera similar, en `Hours_Studied`, se detectan valores extremos por encima de las 35 horas y por debajo de las 5 horas de estudio. Si bien estos pueden parecer atípicos desde una perspectiva estadística, es posible que reflejen hábitos de estudio reales en algunos estudiantes.
+
+En cambio, en el gráfico de `Exam_Scores`, se pueden notar calificaciones que superan el valor máximo permitido de 100. Para solucionar esto, filtraremos las filas en las que el valor de `Exam_Score` sea superior a 100 y lo estableceremos a la máxima nota posible, es decir, 100.
 
 ```{r}
 data$Exam_Score[data$Exam_Score > 100] <- 100
@@ -238,7 +350,7 @@ Para preparar los datos de manera óptima para el análisis, aplicamos varias tr
 
 Con esta función convertimos las columnas del data frame en factores ordenados y les asignamos valores enteros, de acuerdo con un orden específico de niveles. Esto es util para las variables que tienen una relación de orden o tienen un nivel jerárquico o progresivo, es decir, que pueden compararse en términos de más o menos, mejor o peor, mayor o menor.
 
--   `Parental_Involvement`,`Access_to_Resources`,`Motivation_Level`,`Family_Income`,`Teacher_Quality` Estas variables pueden ordenarse de menor a mayor o viceversa".
+-   `Parental_Involvement`,`Access_to_Resources`,`Motivation_Level`,`Family_Income`,`Teacher_Quality`. Estas variables pueden ordenarse de menor a mayor o viceversa".
 
 -   En `Peer_Influence`, **Positive \> Neutral \> Negative** en términos de impacto en el rendimiento. Por lo que tambien se pueden ordenar.
 
@@ -406,8 +518,9 @@ create_dist_grap <- function(df, variable, binwidth = 1, fill = "cornflowerblue"
 
 create_dist_grap(data, "Sleep_Hours")
 create_dist_grap(data, "Hours_Studied")
-create_dist_grap(data, "Tutoring_Sessions")
 create_dist_grap(data, "Attendance", binwidth = 5)
+create_dist_grap(data, "Tutoring_Sessions")
+create_dist_grap(data, "Physical_Activity")
 create_dist_grap(data, "Previous_Scores")
 create_dist_grap(data, "Exam_Score", fill = "orange")
 ```
@@ -438,18 +551,171 @@ create_pie_chart <- function(df, var_name) {
 ```
 
 ```{r}
-create_pie_chart(data, "Parental_Involvement")
-create_pie_chart(data, "Access_to_Resources")
-create_pie_chart(data, "Parental_Education_Level")
-create_pie_chart(data, "Distance_from_Home")
-create_pie_chart(data, "Extracurricular_Activities")
-create_pie_chart(data, "School_Type")
-create_pie_chart(data, "Gender")
+barplot_chart <- function(df, var_name, show_percentage = TRUE) {
+  if (!(var_name %in% colnames(df))) {
+    stop("La variable no existe en el dataframe.")
+  }
+  
+  dist_var <- as.data.frame(table(df[[var_name]]))
+  colnames(dist_var) <- c(var_name, "Count")
+  dist_var$Percentage <- dist_var$Count / sum(dist_var$Count) * 100
+  
+
+  colors <- brewer.pal(n = nrow(dist_var), name = "Pastel1")  
+  
+  p <- ggplot(dist_var, aes_string(x = var_name, y = "Count", fill = var_name)) +
+    geom_bar(stat = "identity", color = "black") +
+    scale_fill_manual(values = colors) +  
+    theme_minimal() +
+    labs(title = paste("Distribución de", var_name),
+         x = var_name,
+         y = "Frecuencia") +
+    theme(legend.position = "none") 
+  
+  if (show_percentage) {
+    p <- p + geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
+                       vjust = -0.3,
+                       color = "black", 
+                       size = 4)
+  }
+  
+  print(p)
+}
+```
+
+```{r}
+barplot_chart(data, "Parental_Involvement", show_percentage = FALSE)
+barplot_chart(data, "Access_to_Resources", show_percentage = FALSE)
+barplot_chart(data, "Parental_Education_Level", show_percentage = FALSE)
+barplot_chart(data, "Distance_from_Home", show_percentage = FALSE)
+barplot_chart(data, "Extracurricular_Activities")
+barplot_chart(data, "School_Type")
+barplot_chart(data, "Gender")
+```
+
+## Relación entre variables (Diagramas de dispersión)
+
+```{r}
+scatter_plot <- function(df, var1, var2) {
+  if (!(var1 %in% colnames(df)) | !(var2 %in% colnames(df))) {
+    stop("Una o ambas variables no existen en el dataframe.")
+  }
+  
+  if (!is.numeric(df[[var1]]) | !is.numeric(df[[var2]])) {
+    stop("Ambas variables deben ser numéricas.")
+  }
+  
+  color_palette <- brewer.pal(9, "Spectral")
+
+  
+  # Crear el gráfico de dispersión
+  p <- ggplot(df, aes(x = .data[[var1]], y = .data[[var2]])) +
+    geom_point(aes(color = .data[[var1]]), size = 3) + 
+    scale_color_gradientn(colors = color_palette) + 
+    geom_smooth(method = "lm", color = "red", se = FALSE) +  # Línea de regresión
+    theme_minimal() +
+    labs(title = paste("Gráfico de Dispersión de", var1, "vs", var2),
+         x = var1,
+         y = var2) +
+    theme(plot.title = element_text(hjust = 0.5))  
+  
+  print(p)
+}
+```
+
+```{r}
+scatter_plot(data, "Hours_Studied", "Exam_Score")
+scatter_plot(data, "Attendance", "Exam_Score")
+```
+
+## Comparación entre variables categórica y numérica
+
+```{r}
+categoric_numeric_barplot <- function(df, cat_var, num_var) {
+  if (!(cat_var %in% colnames(df)) | !(num_var %in% colnames(df))) {
+    stop("Una o ambas variables no existen en el dataframe.")
+  }
+  
+  color_palette <- brewer.pal(3, "Pastel1")  
+  
+
+  p <- ggplot(df, aes_string(x = cat_var, y = num_var, fill = cat_var)) +
+    geom_bar(stat = "summary", fun = "mean", color = "black") +
+    scale_fill_manual(values = color_palette) +  
+    theme_minimal() +
+    labs(title = paste("Promedio de", num_var, "por", cat_var),
+         x = cat_var,
+         y = paste("Promedio de", num_var)) +
+    theme(plot.title = element_text(hjust = 0.5)) 
+  
+  print(p)
+}
+
+categoric_numeric_barplot(data,"Parental_Involvement","Previous_Scores")
+categoric_numeric_barplot(data,"Access_to_Resources","Previous_Scores")
+categoric_numeric_barplot(data,"Motivation_Level","Previous_Scores")
+categoric_numeric_barplot(data,"School_Type","Previous_Scores")
+```
+
+## Relación entre variables categóricas
+
+```{r}
+stacked_barplot <- function(df, var_x, var_fill) {
+  if (!(var_x %in% colnames(df)) | !(var_fill %in% colnames(df))) {
+    stop("One or both variables do not exist in the dataframe.")
+  }
+  
+  df[[var_x]] <- as.factor(df[[var_x]])
+  df[[var_fill]] <- as.factor(df[[var_fill]])
+  
+
+  color_palette <- brewer.pal(3, "Pastel1")  
+  
+  p <- ggplot(df, aes_string(x = var_x, fill = var_fill)) +
+    geom_bar(position = "fill") +
+    scale_fill_manual(values = color_palette) + 
+    theme_minimal() +
+    labs(title = paste("Distribution of", var_fill, "by", var_x),
+         x = var_x,
+         y = "Proportion") +
+    theme(plot.title = element_text(hjust = 0.5)) 
+  
+  print(p)
+}
+
+stacked_barplot(data, "School_Type", "Parental_Involvement")
+stacked_barplot(data, "School_Type", "Family_Income")
+stacked_barplot(data, "School_Type", "Teacher_Quality")
+```
+
+```{r}
+barplot_school_attendance_avg <- function(df) {
+  if (!("School_Type" %in% colnames(df)) | !("Attendance" %in% colnames(df))) {
+    stop("Las columnas School_Type y Attendance deben existir en el dataframe.")
+  }
+  
+  avg_attendance <- aggregate(Attendance ~ School_Type, data = df, FUN = mean)
+  colors <- brewer.pal(n = nrow(avg_attendance), name = "Pastel1")
+  
+  p <- ggplot(avg_attendance, aes(x = School_Type, y = Attendance, fill = School_Type)) +
+    geom_bar(stat = "identity", color = "black") +
+    scale_fill_manual(values = colors) + 
+    theme_minimal() +
+    labs(title = "Promedio de Asistencia por Tipo de Escuela",
+         x = "Tipo de Escuela",
+         y = "Promedio de Asistencia") +
+    theme(legend.position = "none")
+  
+  print(p)
+}
+
+barplot_school_attendance_avg(data)
+
 ```
 
 ## Preguntas
 
-### ¿**Se pueden agrupar a los estudiantes en una clase según sus características?**
+### ¿Se pueden agrupar a los estudiantes en una clase según sus características?
 
 -   **Objectivo**: Intentar asignar a los alumnos a grupos de manera que se favorezca su aprendizaje.
 
