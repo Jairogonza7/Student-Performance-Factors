@@ -1,0 +1,882 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Preguntas
+
+# **¿Que factores afectan a la motivación de los alumnos en los distintos ámbitos de la vida?**
+
+La motivación estudiantil es un factor clave en el rendimiento académico y el desarrollo personal de los alumnos. Diversos estudios han demostrado que los estudiantes con altos niveles de motivación tienden a obtener mejores calificaciones, participar más activamente en el aula y desarrollar habilidades de aprendizaje autónomo. La motivación puede estar influenciada por una variedad de factores, que pueden agruparse en diferentes enfoques: académico, familiar, social y personal. Comprender qué factores afectan la motivación de los estudiantes permite a educadores y responsables educativos diseñar estrategias más efectivas para mejorar el aprendizaje.
+
+En este proyecto, emplearemos técnicas de Data Science para analizar y modelar la motivación estudiantil a partir de un conjunto de datos que contiene información relevante sobre los alumnos. El objetivo es identificar qué factores tienen mayor impacto en la motivación de los estudiantes utilizando reglas de asociación.
+
+Para abordar este análisis de manera estructurada, consideraremos los siguientes enfoques:
+
+\- **Enfoque Académico**: Incluye factores como horas de estudio, asistencia, acceso a recursos educativos, calidad docente, puntuaciones previas, tipo de colegio y tiempo de tutoria.
+
+\- **Enfoque Familiar**: Considera el nivel de ingresos familiares, la implicación de los padres en la educación y su nivel educativo.
+
+\- **Enfoque Social**: Evalúa la influencia de los compañeros, la participación en actividades extracurriculares y el acceso a internet.
+
+\- **Enfoque Personal**: Examina variables como las horas de sueño, la actividad física, la presencia de dificultades de aprendizaje, la distancia a la escuela y el género.
+
+\- **Enfoque General**: Examina todas las variables.
+
+Al final de cada estudio, se pretende proporcionar un análisis detallado sobre los factores que más influyen en la motivación estudiantil, ayudando a diseñar estrategias educativas más eficaces basadas en datos.
+
+```{r}
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if(length(new.pkg))
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+packages <- c("tidyverse","caret","ggplot2","arules","arulesViz","dplyr", "caTools")
+ipak(packages)
+```
+
+Para comenzar con esta implementación comenzaremos cargando el dataframe global limpio, es decir, transformado de actributos categoricos a numericos y eliminación de filas con valores faltantes.
+
+```{r}
+df_cleaned <- read.csv("df_cleaned.csv")
+df_cleaned
+```
+
+Ahora vamos a definir que columnas se utilizara para realizar el estudio de cada ámbito del estudiante
+
+```{r}
+academic_columns <- c("Hours_Studied", "Attendance", "Exam_Score", "Previous_Scores","Access_to_Resources", "Teacher_Quality",
+"School_Type_Public","Tutoring_Sessions","Motivation_Level")
+familiar_columns <- c("Family_Income", "Parental_Involvement", "Parental_Education_Level","Motivation_Level")
+social_columns <- c("Extracurricular_Activities", "Internet_Access", "Peer_Influence","Motivation_Level")
+personal_columns <- c("Learning_Disabilities", "Distance_from_Home", "Sleep_Hours","Physical_Activity","Gender_Male","Motivation_Level")
+```
+
+Se genera las particiones de los datos segun al ámbito a desarrollar
+
+```{r}
+data_for_cluster_academic <- select(df_cleaned, all_of(academic_columns))
+data_for_cluster_familiar <- select(df_cleaned, all_of(familiar_columns))
+data_for_cluster_social <- select(df_cleaned, all_of(social_columns))
+data_for_cluster_personal <- select(df_cleaned, all_of(personal_columns))
+data_for_cluster_general <- df_cleaned[, !(names(df_cleaned) %in% c("Gender_Female", "School_Type_Private"))]
+```
+
+A continuación se desarrolla la funciones para realizar la categorización de las columnas que son categoricas, ya que el dataset posee dichas columnas numericas, discretización de las variables numericas para que sean categoricas y de esta manera mejorar la salida Apriori
+
+```{r}
+categorizar_columnas <- function(dataset, columna, levels, labels) {
+  dataset[[columna]] <- factor(dataset[[columna]], 
+                               levels = levels, 
+                               labels = labels)
+  return(dataset)
+}
+```
+
+```{r}
+discretizar_columnas_numericas <- function(dataset, columna, etiquetas) {
+  dataset[[columna]] <- discretize(dataset[[columna]], 
+                                   method = "frequency", 
+                                   breaks = length(etiquetas),  
+                                   labels = etiquetas)
+  return(dataset)
+}
+```
+
+```{r}
+mostrar_distribuciones <- function(dataset, columna) {
+  # Usamos dataset[[columna]] para acceder a la columna dinámica
+  barplot(table(dataset[[columna]]), 
+          main = columna,         # Usamos el nombre de la columna como título
+          col = "steelblue")     # Establecemos el color de las barras
+}
+```
+
+```{r}
+
+```
+
+### **Académico**
+
+En primer lugar factorizamos las variables categóricas y etiquetamos sus posibles valores
+
+```{r}
+data_for_cluster_academic <- categorizar_columnas(data_for_cluster_academic, "Access_to_Resources", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_academic <- categorizar_columnas(data_for_cluster_academic, "Teacher_Quality", c(1,2,3), c("Poco Cualificada","Cualificada","Muy Cualificada"))
+data_for_cluster_academic <- categorizar_columnas(data_for_cluster_academic, "School_Type_Public", c(0,1), c("No","Sí"))
+data_for_cluster_academic <- categorizar_columnas(data_for_cluster_academic, "Motivation_Level", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_academic
+```
+
+A continuación discretizamos los valores numericos continuos en categorias.
+
+```{r}
+data_for_cluster_academic <- discretizar_columnas_numericas(data_for_cluster_academic,"Hours_Studied",c("Pocas Horas", "Horas Normales", "Muchas Horas"))
+data_for_cluster_academic <- discretizar_columnas_numericas(data_for_cluster_academic,"Attendance",c("Poca Asistencia", "Asistencia Normal", "Asiste Con Mucha Fecuencia"))
+data_for_cluster_academic <- discretizar_columnas_numericas(data_for_cluster_academic,"Exam_Score",c("Baja Calificación", "Buena Calificación", "Mala Calificación"))
+data_for_cluster_academic <- discretizar_columnas_numericas(data_for_cluster_academic,"Previous_Scores",c("Baja Calificación", "Buena Calificación", "Mala Calificación"))
+data_for_cluster_academic <- discretizar_columnas_numericas(data_for_cluster_academic,"Tutoring_Sessions",c("No Asiste", "Asiste", "Asiste a Muchas"))
+data_for_cluster_academic
+```
+
+```{r}
+par(mfrow = c(3, 3))  # Ajusta según tus necesidades, en este caso 3x3
+
+for (name in colnames(data_for_cluster_academic)) {
+  # Excluir columnas no categóricas (solo factores y caracteres)
+  if (is.factor(data_for_cluster_academic[[name]]) | is.character(data_for_cluster_academic[[name]])) {
+    mostrar_distribuciones(data_for_cluster_academic, name)
+  }
+}
+```
+
+Una vez que se han completado los procesos de factorización y discretización de los datos necesarios, me he dispuesto a analizar la distribución de los elementos en las distintas columnas de nuestro conjunto de datos. Al observar las representaciones resultantes, he podido identificar patrones interesantes relacionados tanto con las variables continuas como con las categóricas.
+
+En primer lugar, al observar las variables que originalmente eran numéricas continuas, tras su discretización, se ha logrado una distribución bastante equilibrada entre las distintas categorías. Este proceso de discretización, que ha consistido en convertir valores continuos en intervalos o categorías, parece haber dado como resultado una segmentación adecuada, que muestra una distribución bien repartida entre las diferentes clases. Esto sugiere que los datos continúan conservando su variabilidad de manera efectiva, a pesar de haber sido convertidos en categorías.
+
+Por otro lado, al analizar las variables que ya eran categóricas desde el principio, se puede observar un patrón interesante en cuanto a la distribución de las clases. En todos los casos, se destaca una categoría dominante que prevalece sobre las demás. Sin embargo, esta dominancia no parece ser arbitraria, sino que tiene una lógica subyacente que refleja la realidad o las tendencias naturales del conjunto de datos. En este sentido, las categorías dominantes corresponden a una interpretación coherente con lo esperado, lo cual refuerza la validez de los datos procesados.
+
+Un ejemplo de esto es la variable relacionada con la cualificación de los profesores, en la cual la categoría dominante corresponde a la opción "Neutra", seguida por "Alta cualificación". Este resultado tiene un sentido lógico, ya que se espera que la mayoría de los registros se encuentren en una categoría intermedia o neutral, lo que refleja una tendencia general en la cualidad percibida de los profesores, en lugar de ser excesivamente polarizada hacia extremos como "Baja" o "Alta cualificación".
+
+En cuanto a la variable que distingue entre colegios públicos y privados, se observa que la clase dominante es, como era de esperar, la opción "Público". Este patrón refleja una realidad social ampliamente conocida, ya que la mayoría de los colegios en muchas regiones son públicos, lo que hace que esta distribución tenga un fuerte fundamento en la estructura educativa de la población. De esta manera, los resultados obtenidos en esta variable son consistentes con las expectativas previas y contribuyen a la validación de los procesos de factorización y discretización realizados.
+
+A continuación se generán las reglas de asociación buscando que el consecuente sea la motivaciones del alumno.
+
+```{r}
+dataset_academic_transaccional <- as(data_for_cluster_academic, "transactions")
+summary(dataset_academic_transaccional)
+```
+
+Generamos las reglas de asociación
+
+```{r}
+reglas <- apriori(dataset_academic_transaccional, 
+                  parameter = list(support = 0.03, confidence = 0.7, minlen = 2, target = "rules"))
+df_reglas <- as(reglas, "data.frame")
+print(df_reglas) # Para verlas en formato tabla
+```
+
+Filtramos aquellas cuyo consecuente sea la motivación de los alumnos
+
+```{r}
+reglas_motivacion_academica <- apriori(dataset_academic_transaccional, 
+                             parameter = list(support = 0.02, confidence = 0.2, minlen = 3),
+                             appearance = list(rhs = c("Motivation_Level=Bajo",
+                                                       "Motivation_Level=Medio",
+                                                       "Motivation_Level=Alto"), 
+                                               default = "lhs"))
+df_reglas_academicas <- as(reglas_motivacion_academica, "data.frame")
+print(df_reglas_academicas)
+```
+
+A continuación se selecciona 3 subconjuntos de reglas, cada subconjunto se ordena por mayor lift, se elimina los valores redundantes y posteriormente se muestra las mejores 20.
+
+```{r}
+reglas_motivacion_bajo <- subset(reglas_motivacion_academica, rhs %in% "Motivation_Level=Bajo")
+reglas_motivacion_medio <- subset(reglas_motivacion_academica, rhs %in% "Motivation_Level=Medio")
+reglas_motivacion_alto <- subset(reglas_motivacion_academica, rhs %in% "Motivation_Level=Alto")
+
+```
+
+```{r}
+top_bajo_academic <- head(sort(reglas_motivacion_bajo, by = "lift", decreasing = TRUE), 20)
+top_medio_academic <- head(sort(reglas_motivacion_medio, by = "lift", decreasing = TRUE), 20)
+top_alto_academic <- head(sort(reglas_motivacion_alto, by = "lift", decreasing = TRUE), 20)
+```
+
+```{r}
+top_bajo_sin_redundancia_academic <- top_bajo_academic[!is.redundant(top_bajo_academic)]
+top_medio_sin_redundancia_academic <- top_medio_academic[!is.redundant(top_medio_academic)]
+top_alto_sin_redundancia_academic <- top_alto_academic[!is.redundant(top_alto_academic)]
+```
+
+```{r}
+df_bajo_academic <- as(top_bajo_sin_redundancia_academic, "data.frame")
+df_medio_academic <- as(top_medio_sin_redundancia_academic, "data.frame")
+df_alto_academic <- as(top_alto_sin_redundancia_academic, "data.frame")
+
+View(df_bajo_academic)   # Ver reglas para "Motivation_Level=Bajo"
+View(df_medio_academic)  # Ver reglas para "Motivation_Level=Medio"
+View(df_alto_academic)   # Ver reglas para "Motivation_Level=Alto"
+```
+
+```{r}
+
+plot(top_bajo_sin_redundancia_academic, method = "graph", engine = "htmlwidget")
+plot(top_medio_sin_redundancia_academic, method = "graph", engine = "htmlwidget")
+plot(top_alto_sin_redundancia_academic, method = "graph", engine = "htmlwidget")
+```
+
+## **Conclusiones**
+
+### Análisis motivación baja ámbito académico
+
+Los datos muestran que el factor más determinante en la baja motivación es el **bajo desempeño en los exámenes**. En todas las reglas analizadas, la variable **"Exam_Score = Baja Calificación"** está presente, lo que indica que los estudiantes con malas notas tienden a sentirse menos motivados. Esto sugiere que la percepción de logro influye directamente en su nivel de interés y compromiso con el aprendizaje.
+
+A pesar de contar con **profesores cualificados**, **acceso a recursos** o **asistencia a tutorías**, la motivación sigue siendo baja si el rendimiento académico no mejora. Esto sugiere que estos factores por sí solos no garantizan mayor motivación y que es necesario enfocarse en estrategias que ayuden realmente al estudiante a mejorar su desempeño.
+
+Además, el hecho de que algunos estudiantes con **múltiples tutorías** sigan desmotivados indica que, en muchos casos, estas sesiones pueden percibirse como una carga o una señal de que están rezagados, en lugar de ser una herramienta efectiva de apoyo. De manera similar, estudiar **pocas horas** también aparece como un factor asociado a la desmotivación, lo que podría ser tanto una causa como una consecuencia.
+
+Para mejorar la motivación, es clave centrarse en **fortalecer el desempeño académico** mediante estrategias de enseñanza efectivas, evaluaciones que refuercen el aprendizaje y métodos que ayuden a los estudiantes a percibir su progreso. **Más que aumentar recursos o tutorías, es fundamental que los alumnos sientan que pueden mejorar sus resultados y que su esfuerzo tiene impacto.**
+
+### Análisis motivación media ámbito académico
+
+Los datos indican que la **motivación media** en los estudiantes está influenciada principalmente por su rendimiento académico, el tiempo de estudio y la calidad de los docentes. Se observa que aquellos estudiantes que obtienen **buenas calificaciones en los exámenes**, pero cuentan con **profesores poco cualificados**, suelen tener una motivación intermedia. Esto sugiere que, aunque el buen desempeño contribuye a su motivación, la falta de apoyo adecuado por parte de los docentes puede limitar su entusiasmo y compromiso con el aprendizaje.
+
+Otro aspecto relevante es el esfuerzo que los estudiantes realizan para mejorar su rendimiento. Aquellos que han tenido **calificaciones previas bajas**, pero dedican **muchas horas al estudio** o **asisten a tutorías**, logran alcanzar una motivación media. Esto indica que el esfuerzo individual puede compensar en cierta medida las dificultades académicas, aunque no siempre genera una motivación alta. Es posible que estos estudiantes aún enfrenten inseguridades o no perciban un progreso significativo que los impulse a niveles de motivación superiores.
+
+Además, el acceso a recursos educativos parece jugar un papel importante. A diferencia de los estudiantes con baja motivación, aquellos con motivación media suelen contar con **recursos educativos en nivel medio o alto**. Esto sugiere que disponer de materiales adecuados ayuda a mantener cierto nivel de motivación, aunque no necesariamente impulsa a los estudiantes hacia un estado de alta motivación. La combinación de una enseñanza poco efectiva con una oferta de recursos insuficientemente aprovechados puede explicar esta tendencia.
+
+Finalmente, la asistencia a tutorías muestra un efecto mixto en la motivación. Mientras que algunos estudiantes con **malas calificaciones** y que **no asisten a tutorías** mantienen una motivación media, otros que sí asisten también se encuentran en este nivel. Esto indica que la tutoría por sí sola no es un factor determinante en la motivación si no está acompañada de mejoras tangibles en el rendimiento académico y la confianza en el aprendizaje.
+
+En conclusión, los estudiantes con motivación media parecen encontrar un **equilibrio entre esfuerzo y resultados**, pero con ciertas limitaciones. Aunque estudiar más y tener acceso a recursos contribuye a su motivación, la falta de un entorno educativo sólido o la persistencia de dificultades académicas pueden impedir que alcancen niveles altos de motivación. Para mejorar esta situación, sería clave **reforzar la confianza en sus capacidades y mejorar la calidad del apoyo docente**.
+
+### Análisis motivación alta ámbito académico
+
+Los datos sugieren que los estudiantes con **motivación alta** pueden tener un desempeño académico deficiente, pero cuentan con otros factores que impulsan su motivación. Un hallazgo relevante es que algunos estudiantes con **malas calificaciones tanto en exámenes como en calificaciones previas** logran una alta motivación. Esto indica que el rendimiento académico no siempre es un factor determinante en su nivel de compromiso, y que otras variables, como el apoyo recibido y el esfuerzo personal, pueden ser más influyentes.
+
+Un patrón clave es la relación entre **tutorías y motivación alta**. Muchos estudiantes con **malas calificaciones pero que asisten a tutorías con frecuencia** muestran un alto nivel de motivación. Esto sugiere que el acompañamiento académico juega un papel importante en mantener su entusiasmo, posiblemente porque les ofrece estrategias para mejorar y un entorno de apoyo. Además, aquellos con **acceso a recursos educativos en nivel medio** también presentan motivación alta, lo que refuerza la idea de que contar con herramientas adecuadas puede impulsar el deseo de mejorar, incluso si los resultados aún no son óptimos.
+
+Otro punto relevante es la calidad de los docentes. Los estudiantes con **profesores muy cualificados** tienden a tener una motivación más alta, a pesar de obtener malas calificaciones. Esto indica que un buen profesor puede ser clave para mantener la confianza del estudiante y su disposición para seguir aprendiendo, independientemente de los resultados a corto plazo.
+
+También se observa que algunos estudiantes con **poca asistencia o pocas horas de estudio, pero con buenas calificaciones**, logran una alta motivación. Esto puede deberse a que confían en su capacidad de aprendizaje autónomo o en estrategias de estudio más efectivas. Por otro lado, los estudiantes que **asisten con mucha frecuencia a clases** y cuentan con **recursos educativos moderados** también se encuentran en este nivel de motivación, lo que sugiere que la constancia y el acceso a materiales adecuados pueden influir en su compromiso académico.
+
+En conclusión, la motivación alta parece estar más vinculada a **factores externos como el apoyo docente, la asistencia a tutorías y el acceso a recursos educativos**, más que al rendimiento académico en sí. Los estudiantes con baja calificación pueden seguir motivados si perciben que tienen oportunidades para mejorar y cuentan con un entorno de apoyo adecuado. Esto destaca la importancia de **fortalecer estrategias de acompañamiento académico y garantizar un acceso equitativo a recursos y docentes cualificados** para mantener e incrementar la motivación estudiantil.
+
+### Conclusión general ámbito académico
+
+Los patrones observados indican que la **motivación estudiantil no depende exclusivamente del desempeño académico**, sino de una combinación de factores como **acceso a recursos, calidad docente, tutorías y hábitos de estudio**. Los estudiantes con **motivación baja** suelen tener **malas calificaciones**, incluso cuando cuentan con profesores cualificados o asisten a tutorías, lo que sugiere que otros factores, como la confianza en sus habilidades, pueden estar influyendo negativamente. La **motivación media** aparece en alumnos con un equilibrio entre fortalezas y debilidades, donde el apoyo docente, el acceso a recursos y la cantidad de estudio juegan un papel clave. En contraste, los estudiantes con **motivación alta** pueden presentar **malas calificaciones**, pero se benefician de **tutorías, acceso a recursos moderados y docentes altamente cualificados**, lo que sugiere que su compromiso se mantiene gracias al respaldo educativo. Estas conclusiones resaltan la **importancia del acompañamiento académico y la creación de entornos de aprendizaje que refuercen la confianza y el interés del estudiante**, más allá de los resultados obtenidos en los exámenes.
+
+### **Familia**
+
+```{r}
+data_for_cluster_familiar <- categorizar_columnas(data_for_cluster_familiar, "Parental_Involvement", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_familiar <- categorizar_columnas(data_for_cluster_familiar, "Family_Income", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_familiar <- categorizar_columnas(data_for_cluster_familiar, "Parental_Education_Level", c(1,2,3), c("Estudios Secundarios","Estudios Universitarios","Estudios de Postgrado"))
+data_for_cluster_familiar <- categorizar_columnas(data_for_cluster_familiar, "Motivation_Level", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_familiar
+```
+
+```{r}
+par(mfrow = c(3, 3))  # Ajusta según tus necesidades, en este caso 3x3
+
+for (name in colnames(data_for_cluster_familiar)) {
+  # Excluir columnas no categóricas (solo factores y caracteres)
+  if (is.factor(data_for_cluster_familiar[[name]]) | is.character(data_for_cluster_familiar[[name]])) {
+    mostrar_distribuciones(data_for_cluster_familiar, name)
+  }
+}
+```
+
+La **participación parental** muestra que los estudiantes cuyos padres tienen un nivel de involucramiento moderado presentan diferencias significativas en su rendimiento, lo que indica que otros factores pueden estar influyendo en sus resultados. De manera similar, el **nivel de motivación** tiene una distribución más dispersa en la categoría “Medio”, lo que sugiere que estos estudiantes pueden experimentar variaciones en su desempeño en función de otros elementos externos.
+
+En cuanto al **nivel educativo de los padres**, se observa que la mayoría tiene estudios secundarios, con menor variabilidad en comparación con otras variables. Esto podría implicar que el impacto del nivel educativo en el rendimiento escolar es más homogéneo dentro de la muestra. Finalmente, la distribución del **ingreso familiar** también sugiere que no hay una diferencia extrema entre los distintos niveles, aunque podría influir en combinación con otras variables.
+
+```{r}
+dataset_familiar_transaccional <- as(data_for_cluster_familiar, "transactions")
+summary(dataset_familiar_transaccional)
+```
+
+```{r}
+reglas <- apriori(dataset_familiar_transaccional, 
+                  parameter = list(support = 0.02, confidence = 0.5, minlen = 2, target = "rules"))
+df_reglas_familiar <- as(reglas, "data.frame")
+print(df_reglas_familiar) # Para verlas en formato tabla
+```
+
+```{r}
+reglas_motivacion_familia <- apriori(dataset_familiar_transaccional, 
+                             parameter = list(support = 0.02, confidence = 0.2, minlen = 2),
+                             appearance = list(rhs = c("Motivation_Level=Bajo",
+                                                       "Motivation_Level=Medio",
+                                                       "Motivation_Level=Alto"), 
+                                               default = "lhs"))
+df_reglas_familia <- as(reglas_motivacion_familia, "data.frame")
+print(df_reglas_familia)
+```
+
+```{r}
+reglas_familia_bajo <- subset(reglas_motivacion_familia, rhs %in% "Motivation_Level=Bajo")
+reglas_familia_medio <- subset(reglas_motivacion_familia, rhs %in% "Motivation_Level=Medio")
+reglas_familia_alto <- subset(reglas_motivacion_familia, rhs %in% "Motivation_Level=Alto")
+```
+
+```{r}
+top_bajo_familiar <- head(sort(reglas_familia_bajo, by = "lift", decreasing = TRUE), 20)
+top_medio_familiar <- head(sort(reglas_familia_medio, by = "lift", decreasing = TRUE), 20)
+top_alto_familiar <- head(sort(reglas_familia_alto, by = "lift", decreasing = TRUE), 20)
+```
+
+```{r}
+top_bajo_sin_redundancia_familiar <- top_bajo_familiar[!is.redundant(top_bajo_familiar)]
+top_medio_sin_redundancia_familiar <- top_medio_familiar[!is.redundant(top_medio_familiar)]
+top_alto_sin_redundancia_familiar <- top_alto_familiar[!is.redundant(top_alto_familiar)]
+```
+
+```{r}
+df_bajo_familiar <- as(top_bajo_sin_redundancia_familiar, "data.frame")
+df_medio_familiar <- as(top_medio_sin_redundancia_familiar, "data.frame")
+df_alto_familiar <- as(top_alto_sin_redundancia_familiar, "data.frame")
+
+View(df_bajo_familiar)   # Ver reglas para "Motivation_Level=Bajo"
+View(df_medio_familiar)  # Ver reglas para "Motivation_Level=Medio"
+View(df_alto_familiar)   # Ver reglas para "Motivation_Level=Alto"
+```
+
+```{r}
+plot(top_bajo_sin_redundancia_familiar, method = "graph", engine = "htmlwidget")
+plot(top_medio_sin_redundancia_familiar, method = "graph", engine = "htmlwidget")
+plot(top_alto_sin_redundancia_familiar, method = "graph", engine = "htmlwidget")
+```
+
+## **Conclusiones**
+
+### Análisis motivación baja ámbito familiar
+
+Uno de los hallazgos más llamativos es que, **aunque los padres posean un alto nivel educativo, como estudios universitarios o de postgrado, esto no garantiza que sus hijos tengan una alta motivación académica**. De hecho, en varios casos, se observa que los estudiantes cuyos padres tienen estudios avanzados presentan niveles bajos de motivación. Esto podría sugerir que, aunque los padres hayan alcanzado un alto nivel académico, puede haber otros factores en juego, como **altas expectativas que generan presión en los estudiantes, falta de tiempo para la orientación directa o diferencias en los métodos de enseñanza y aprendizaje** que afectan la motivación.
+
+Otro factor clave identificado es el **nivel de ingresos familiares**. Se observa que **los estudiantes provenientes de familias con ingresos bajos tienen una mayor probabilidad de mostrar motivación baja**. Esto puede estar relacionado con la falta de acceso a recursos educativos adecuados, la necesidad de asumir responsabilidades adicionales en el hogar o incluso el estrés financiero que afecta el bienestar general del estudiante. Sin embargo, un hallazgo interesante es que **los estudiantes de familias con ingresos altos también pueden presentar baja motivación**, lo que sugiere que la estabilidad económica por sí sola no es un factor determinante en la motivación académica y que otros aspectos, como la dinámica familiar y la presión social, pueden influir negativamente.
+
+En cuanto al **nivel de involucramiento de los padres en la educación de sus hijos**, se encontró que tanto un nivel **medio como alto de participación parental pueden estar asociados con una baja motivación**. Esto puede deberse a distintos factores: un involucramiento **demasiado alto** podría traducirse en una **presión excesiva sobre el estudiante, limitando su autonomía y generando estrés**, mientras que un involucramiento **moderado pero insuficiente para brindar apoyo efectivo** podría llevar a una falta de guía o dirección. Esto sugiere que **no solo es importante la presencia de los padres en la educación de sus hijos, sino también la calidad y el enfoque del apoyo que brindan**.
+
+Además, la combinación de distintos factores familiares parece incrementar la probabilidad de una baja motivación. Por ejemplo, cuando un **ingreso familiar bajo se combina con un nivel de involucramiento medio por parte de los padres**, la motivación del estudiante tiende a ser más baja, lo que indica que la falta de recursos junto con una participación no suficientemente efectiva puede afectar el compromiso académico del estudiante. Asimismo, el **nivel educativo de los padres, cuando es bajo o medio (como estudios secundarios), se asocia frecuentemente con motivación baja**, lo que puede reflejar **la ausencia de modelos académicos sólidos en el hogar o una menor capacidad de apoyo en las tareas escolares**.
+
+### Análisis motivación media ámbito familiar
+
+Primero, se destaca la relación entre el **nivel educativo de los padres** y la motivación media. Por ejemplo, cuando los padres tienen **estudios secundarios**, **de postgrado** o **universitarios**, se observa una mayor probabilidad de que los estudiantes tengan una motivación media, lo que podría implicar que, aunque los padres poseen una educación elevada, factores como la presión, las expectativas o incluso el tipo de apoyo educativo brindado podrían no ser suficientemente efectivos para fomentar una alta motivación en sus hijos. Esto también puede ser indicativo de que los estudiantes pueden sentir una desconexión entre el nivel educativo de sus padres y las exigencias del sistema educativo, lo que podría generar una falta de motivación.
+
+El **nivel de involucramiento de los padres** también tiene una fuerte influencia en los niveles de motivación de los estudiantes. Se observa que tanto el **involucramiento bajo** como el **medio** están asociados con una motivación media. Esto sugiere que **el involucramiento de los padres no siempre garantiza una alta motivación**, ya que la calidad de este involucramiento podría ser clave. Los estudiantes cuyas familias tienen un nivel medio de participación pueden recibir apoyo, pero tal vez no en la forma más adecuada para mantener su motivación elevada. De hecho, cuando el involucramiento es bajo, aunque los padres no estén completamente ausentes, puede reflejar falta de seguimiento o atención en el proceso académico, lo cual impacta la motivación del estudiante.
+
+En cuanto a los **ingresos familiares**, es interesante notar que **los estudiantes de familias con ingresos bajos** combinados con ciertos niveles educativos o de participación parental, como en el caso de los padres con **estudios secundarios o universitarios**, también muestran una tendencia hacia la motivación media. Esto puede estar relacionado con la falta de recursos o el estrés asociado a las preocupaciones económicas, aunque los padres puedan tener un buen nivel educativo.
+
+La **combinación de ingresos bajos y un involucramiento parental medio o alto** también se asocia con una motivación media, lo que sugiere que, aunque los padres se involucren más en el proceso educativo, la falta de recursos puede reducir la efectividad de este apoyo, limitando el potencial para desarrollar una motivación alta en los estudiantes. Sin embargo, el **involucramiento alto** de los padres, cuando se combina con ingresos bajos y estudios secundarios, muestra que en ciertos contextos, este tipo de participación parental puede generar un ambiente educativo más estimulante, pero aún no lo suficiente como para alcanzar niveles altos de motivación.
+
+### Análisis motivación alta ámbito familiar
+
+Primero, la **combinación de un alto nivel de ingresos familiares** con el **nivel educativo secundario de los padres** muestra que incluso cuando los padres tienen estudios secundarios, un alto nivel de ingresos está asociado con una motivación alta en los estudiantes. Esto podría sugerir que el ambiente económico estable proporciona a los estudiantes acceso a recursos educativos y oportunidades que fomentan una motivación más fuerte para el aprendizaje. De manera similar, cuando los ingresos son **medios**, el **involucramiento parental medio** junto con el nivel educativo de los padres puede aumentar las probabilidades de una motivación académica alta, indicando que la calidad del involucramiento y el apoyo educativo, en combinación con una estabilidad económica, juegan un papel fundamental en el fomento de la motivación.
+
+Otro patrón interesante se observa cuando **los padres tienen estudios universitarios**, especialmente en combinación con ingresos bajos o medios. Los estudiantes cuyos padres tienen un **nivel educativo alto** (como estudios universitarios) presentan una probabilidad significativa de tener una motivación alta, lo cual puede reflejar que los padres con una formación académica más alta son más capaces de proporcionar apoyo educativo de calidad, incluso en contextos con recursos limitados. Este apoyo puede ser emocional, académico o incluso social, lo que permite a los estudiantes mantenerse motivados para tener éxito, independientemente de los ingresos familiares.
+
+El **involucramiento parental** también juega un papel clave. Las reglas muestran que **el involucramiento medio** de los padres tiene una fuerte correlación con una motivación académica alta en los estudiantes, independientemente de los ingresos familiares o el nivel educativo de los padres. Esto podría implicar que el tipo de involucramiento es más importante que el nivel de ingresos. Los padres que se involucran activamente, aunque no sean necesariamente los más educados o económicamente favorecidos, pueden ofrecer a sus hijos el apoyo necesario para mantener una motivación alta. Este patrón refleja que una participación equilibrada y genuina de los padres puede ser más efectiva para aumentar la motivación que la simple presencia de recursos financieros o educativos.
+
+Un análisis adicional muestra que **el involucramiento bajo** de los padres también está asociado con motivación alta en ciertas condiciones, lo que sugiere que la motivación no depende exclusivamente de la presencia activa de los padres en el proceso educativo. Sin embargo, este patrón podría depender de otros factores contextuales, como la independencia del estudiante, la influencia de otros mentores o la estabilidad emocional que les permite mantener un nivel de motivación alto, incluso sin un involucramiento constante.
+
+### Conclusiones general ámbito familiar
+
+La motivación académica de los estudiantes está fuertemente influenciada por diversos factores familiares, entre los cuales el nivel económico de la familia juega un papel importante. Las familias con ingresos más altos suelen proporcionar un entorno más estable y con mejores recursos educativos, lo que se traduce en una mayor motivación académica de los estudiantes. Además, el nivel educativo de los padres también tiene un impacto crucial en la motivación. Los estudiantes cuyas familias cuentan con padres con estudios universitarios o de postgrado tienden a mostrar una mayor motivación, especialmente cuando estos padres están activamente involucrados en el proceso educativo.
+
+El involucramiento de los padres es uno de los factores determinantes. Cuando los padres están moderadamente o altamente involucrados en la vida académica de sus hijos, esto contribuye significativamente al desarrollo de una motivación más alta. No obstante, este impacto positivo no depende únicamente de los recursos económicos o el nivel educativo de los padres, sino también del apoyo emocional y académico que los padres brindan a sus hijos. En este sentido, incluso en familias con ingresos medios o bajos, el compromiso y apoyo de los padres puede contrarrestar los posibles efectos negativos y fomentar una motivación académica más fuerte.
+
+En resumen, el entorno familiar, que combina factores como el nivel de ingresos, la educación de los padres y su involucramiento en la educación, tiene un efecto decisivo en la motivación académica de los estudiantes. Un adecuado apoyo económico y un alto involucramiento parental crean las condiciones más favorables para una motivación académica alta. Sin embargo, es importante destacar que el apoyo emocional y académico de los padres puede mejorar la motivación incluso en contextos de ingresos más modestos.
+
+### Social
+
+```{r}
+data_for_cluster_social <- categorizar_columnas(data_for_cluster_social, "Extracurricular_Activities", c(0,1), c("No","Sí"))
+data_for_cluster_social <- categorizar_columnas(data_for_cluster_social, "Internet_Access", c(0,1), c("No","Sí"))
+data_for_cluster_social <- categorizar_columnas(data_for_cluster_social, "Peer_Influence", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_social <- categorizar_columnas(data_for_cluster_social, "Motivation_Level", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_social
+```
+
+```{r}
+par(mfrow = c(3, 3))  # Ajusta según tus necesidades, en este caso 3x3
+
+for (name in colnames(data_for_cluster_social)) {
+  # Excluir columnas no categóricas (solo factores y caracteres)
+  if (is.factor(data_for_cluster_social[[name]]) | is.character(data_for_cluster_social[[name]])) {
+    mostrar_distribuciones(data_for_cluster_social, name)
+  }
+}
+```
+
+En primer lugar, se observa que los estudiantes que participan en actividades extracurriculares tienen una mayor representación en comparación con aquellos que no lo hacen. Esto sugiere que una mayor proporción de estudiantes elige involucrarse en actividades fuera del aula, lo que podría estar relacionado con un mejor desarrollo académico o social.
+
+En cuanto al acceso a Internet, hay una notable diferencia entre los estudiantes que tienen acceso y aquellos que no. La mayoría parece contar con acceso a Internet, lo que puede ser un factor importante en el aprendizaje y el rendimiento escolar, ya que facilita el acceso a recursos educativos y la comunicación.
+
+Por otro lado, la influencia de los compañeros muestra una distribución relativamente uniforme entre los niveles bajo, medio y alto. Esto indica que no hay un predominio claro de un nivel de influencia en particular, lo que sugiere que la presión de los compañeros afecta a los estudiantes de manera variada y no necesariamente en una única dirección.
+
+Finalmente, en cuanto al nivel de motivación, se observa que la categoría "Medio" tiene una mayor frecuencia en comparación con "Bajo" y "Alto". Esto podría indicar que la mayoría de los estudiantes se encuentran en un nivel intermedio de motivación, lo cual podría estar relacionado con una actitud equilibrada hacia el estudio y otras actividades académicas.
+
+```{r}
+dataset_social_transaccional <- as(data_for_cluster_social, "transactions")
+summary(dataset_social_transaccional)
+```
+
+```{r}
+reglas_social <- apriori(dataset_social_transaccional, 
+                  parameter = list(support = 0.02, confidence = 0.5, minlen = 2, target = "rules"))
+df_reglas_social <- as(reglas_social, "data.frame")
+print(df_reglas_social) # Para verlas en formato tabla
+```
+
+```{r}
+reglas_motivacion_social <- apriori(dataset_social_transaccional, 
+                             parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
+                             appearance = list(rhs = c("Motivation_Level=Bajo",
+                                                       "Motivation_Level=Medio",
+                                                       "Motivation_Level=Alto"), 
+                                               default = "lhs"))
+df_reglas_social <- as(reglas_motivacion_social, "data.frame")
+print(df_reglas_social)
+```
+
+```{r}
+reglas_social_bajo <- subset(reglas_motivacion_social, rhs %in% "Motivation_Level=Bajo")
+reglas_social_medio <- subset(reglas_motivacion_social, rhs %in% "Motivation_Level=Medio")
+reglas_social_alto <- subset(reglas_motivacion_social, rhs %in% "Motivation_Level=Alto")
+```
+
+```{r}
+top_bajo_social <- head(sort(reglas_social_bajo, by = "lift", decreasing = TRUE), 20)
+top_medio_social <- head(sort(reglas_social_medio, by = "lift", decreasing = TRUE), 20)
+top_alto_social <- head(sort(reglas_social_alto, by = "lift", decreasing = TRUE), 20)
+```
+
+```{r}
+top_bajo_sin_redundancia_social <- top_bajo_social[!is.redundant(top_bajo_social)]
+top_medio_sin_redundancia_social <- top_medio_social[!is.redundant(top_medio_social)]
+top_alto_sin_redundancia_social <- top_alto_social[!is.redundant(top_alto_social)]
+```
+
+```{r}
+df_bajo_social <- as(top_bajo_sin_redundancia_social, "data.frame")
+df_medio_social <- as(top_medio_sin_redundancia_social, "data.frame")
+df_alto_social <- as(top_alto_sin_redundancia_social, "data.frame")
+
+View(df_bajo_social)   # Ver reglas para "Motivation_Level=Bajo"
+View(df_medio_social)  # Ver reglas para "Motivation_Level=Medio"
+View(df_alto_social)   # Ver reglas para "Motivation_Level=Alto"
+```
+
+```{r}
+plot(top_bajo_sin_redundancia_social, method = "graph", engine = "htmlwidget")
+plot(top_medio_sin_redundancia_social, method = "graph", engine = "htmlwidget")
+plot(top_alto_sin_redundancia_social, method = "graph", engine = "htmlwidget")
+```
+
+### Análisis motivación baja ámbito social
+
+Uno de los hallazgos más significativos es la relación entre la **falta de acceso a Internet** y una **motivación baja**. La ausencia de Internet implica una limitación en el acceso a recursos educativos, plataformas de aprendizaje y materiales de estudio que podrían estimular el interés de los estudiantes. En un mundo donde la educación digital y las herramientas en línea juegan un papel crucial en el proceso de aprendizaje, no contar con acceso a Internet puede generar frustración, dificultades para realizar tareas y una sensación de desventaja frente a aquellos compañeros que sí disponen de estos recursos. Esto podría llevar a una disminución en el interés por el estudio, afectando la motivación general de los estudiantes.
+
+Otro factor relevante es la f**alta de participación en actividades extracurriculares**. Estas actividades suelen proporcionar un sentido de propósito y compromiso, ayudando a los estudiantes a desarrollar habilidades adicionales, establecer metas personales y mejorar su bienestar emocional. La ausencia de estas experiencias puede traducirse en una rutina académica monótona y poco estimulante, lo que impacta directamente en la motivación. Además, la falta de actividades extracurriculares puede estar relacionada con una menor interacción social y una menor exposición a situaciones que fomenten el desarrollo de la disciplina, el trabajo en equipo y la resolución de problemas.
+
+**La influencia de los compañeros también desempeña un papel clave** en la motivación de los estudiantes, aunque de una manera ambivalente. Tanto una baja influencia de los compañeros como una influencia alta se asocian con la motivación baja. Esto sugiere que un entorno social pobre, en el que los estudiantes tienen pocas interacciones significativas con sus pares, puede generar desinterés y una menor motivación hacia el aprendizaje. Sin embargo, una presión social excesiva o una influencia negativa de los compañeros también puede desmotivar a los estudiantes, ya sea porque se sienten sobrecargados o porque el grupo social al que pertenecen no fomenta hábitos de estudio positivos.
+
+De manera interesante, los datos también muestran que, aunque la falta de acceso a Internet está relacionada con la motivación baja, el simple hecho de contar con Internet no garantiza niveles altos de motivación. Esto sugiere que el acceso a Internet debe ir acompañado de un uso adecuado de esta herramienta. Los estudiantes que tienen Internet pero presentan una motivación baja podrían estar usándolo de manera poco productiva, distrayéndose con entretenimiento en lugar de aprovecharlo para el aprendizaje. Este hallazgo resalta la importancia de fomentar hábitos de estudio adecuados y el uso responsable de la tecnología en el ámbito educativo.
+
+Otro punto destacable es que, aunque la fa**lta de actividades extracurriculares está claramente relacionada con la motivación baja**, también se encontró una asociación entre la participación en actividades extracurriculares y la baja motivación en algunos casos. Esto puede interpretarse de varias maneras. Primero, podría indicar que no todas las actividades extracurriculares son igualmente beneficiosas para la motivación; algunas podrían ser vistas como obligatorias o poco atractivas, lo que podría generar desinterés en los estudiantes en lugar de incentivarlos. En segundo lugar, podría reflejar que algunos estudiantes que participan en demasiadas actividades pueden sentirse sobrecargados y agotados, lo que afectaría su motivación académica.
+
+En conjunto, estos resultados sugieren que la motivación baja en los estudiantes está influenciada por un equilibrio delicado entre el acceso a recursos, la interacción social, la carga extracurricular y el uso adecuado de la tecnología. No es suficiente simplemente proporcionar acceso a Internet o promover la participación en actividades extracurriculares; es fundamental garantizar que estos factores se gestionen de manera efectiva para que realmente contribuyan a la motivación de los estudiantes. Asimismo, es importante fomentar un entorno social positivo en el que la influencia de los compañeros sea equilibrada y constructiva.
+
+### Análisis motivación media ámbito social
+
+Los resultados sugieren que la **motivación intermedia es un estado en el que los estudiantes no enfrentan grandes barreras que los desmotiven completamente**, pero tampoco encuentran suficientes incentivos para alcanzar niveles altos de motivación.
+
+**El acceso a Internet parece ser un factor estabilizador,** proporcionando recursos que ayudan a evitar la desmotivación, pero sin garantizar un entusiasmo sobresaliente por el aprendizaje. De manera similar, la influencia moderada de los compañeros parece ser un elemento clave en la regulación de la motivación, ya que permite cierto grado de interacción y apoyo social sin generar una presión excesiva.
+
+Las actividades extracurriculares tienen un impacto variado y no siempre conducen a una motivación más alta. En algunos casos, **pueden contribuir a mantener la motivación en un nivel moderado**, especialmente cuando se combinan con una fuerte influencia social. Por otro lado, su ausencia no necesariamente implica una desmotivación total, ya que otros factores, como el acceso a Internet y la dinámica social, pueden compensar la falta de participación en actividades adicionales.
+
+### Análisis motivación alta ámbito social
+
+El análisis de las reglas de asociación para la motivación alta muestra que múltiples factores influyen en el nivel de compromiso académico de los estudiantes. Uno de los hallazgos más destacados es la **importancia de las actividades extracurriculares**, ya que su participación se asocia de manera consistente con un mayor nivel de motivación. Esto sugiere que los estudiantes que participan en actividades fuera del aula tienden a desarrollar un **mayor interés en el aprendizaje** y en su crecimiento personal.
+
+**El acceso a Internet también juega un papel clave en la motivación alta**, ya que proporciona recursos adicionales para el aprendizaje y fomenta la autonomía del estudiante. Se observa que aquellos que combinan actividades extracurriculares con acceso a Internet tienen una mayor probabilidad de estar altamente motivados. Además, cuando los estudiantes tienen acceso a Internet y una fuerte influencia social, su motivación sigue siendo alta, lo que indica que el aprendizaje en red y la interacción digital pueden reforzar su compromiso.
+
+**La influencia de los compañeros tiene un efecto mixto en la motivación**. Tanto un alto como un bajo nivel de influencia social pueden estar asociados con la motivación alta, dependiendo del contexto. Por un lado, una alta influencia social puede fomentar la colaboración y el sentido de pertenencia, lo que impulsa la motivación. Por otro lado, algunos estudiantes parecen encontrar motivación en la independencia y la autonomía, compensando la falta de presión social con la participación en actividades estructuradas.
+
+### Conclusiones Generales ámbito social
+
+Para los estudiantes con **baja motivación**, la falta de acceso a Internet y la ausencia de actividades extracurriculares aparecen como factores predominantes. Además, una baja influencia de los compañeros también se asocia con este grupo, lo que sugiere que el aislamiento o la falta de interacción social pueden estar relacionados con una menor disposición al aprendizaje. En general, estos estudiantes carecen de estímulos externos que refuercen su compromiso académico, lo que indica la necesidad de estrategias que fomenten su participación en entornos más dinámicos.
+
+En el caso de la **motivación intermedia**, los resultados muestran que los estudiantes en esta categoría tienen acceso a Internet y una influencia social moderada. También se observa que la combinación de ciertas variables, como no participar en actividades extracurriculares pero contar con Internet y una influencia social media, favorece una motivación estable. Esto sugiere que estos estudiantes pueden mantener un nivel aceptable de compromiso, pero no necesariamente poseen factores adicionales que los impulsen a un mayor desempeño.
+
+Por otro lado, los estudiantes con **alta motivación** suelen estar involucrados en actividades extracurriculares, tienen acceso a Internet y pueden estar tanto en entornos con alta o baja influencia social. Esto indica que la clave para la motivación alta no radica solo en la cantidad de interacciones sociales, sino en la calidad y el tipo de actividades en las que participan. La combinación de estos elementos genera un entorno propicio para el aprendizaje autónomo y el desarrollo personal.
+
+### Personal
+
+```{r}
+data_for_cluster_personal <- categorizar_columnas(data_for_cluster_personal, "Learning_Disabilities", c(0,1), c("No","Sí"))
+data_for_cluster_personal <- categorizar_columnas(data_for_cluster_personal, "Distance_from_Home", c(1,2,3), c("Cerca","Moderada", "Lejos"))
+data_for_cluster_personal <- categorizar_columnas(data_for_cluster_personal, "Gender_Male", c(0,1), c("No","Sí"))
+data_for_cluster_personal <- categorizar_columnas(data_for_cluster_personal, "Motivation_Level", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_personal
+```
+
+```{r}
+data_for_cluster_personal <- discretizar_columnas_numericas(data_for_cluster_personal,"Sleep_Hours",c("Pocas Horas", "Horas Normales", "Muchas Horas"))
+data_for_cluster_personal <- discretizar_columnas_numericas(data_for_cluster_personal,"Physical_Activity",c("Poca Actividad","Mucha Actividad"))
+data_for_cluster_personal
+```
+
+```{r}
+par(mfrow = c(3, 3))  # Ajusta según tus necesidades, en este caso 3x3
+
+for (name in colnames(data_for_cluster_personal)) {
+  # Excluir columnas no categóricas (solo factores y caracteres)
+  if (is.factor(data_for_cluster_personal[[name]]) | is.character(data_for_cluster_personal[[name]])) {
+    mostrar_distribuciones(data_for_cluster_personal, name)
+  }
+}
+```
+
+```{r}
+dataset_personal_transaccional <- as(data_for_cluster_personal, "transactions")
+summary(dataset_personal_transaccional)
+```
+
+```{r}
+reglas_personal <- apriori(dataset_personal_transaccional, 
+                  parameter = list(support = 0.02, confidence = 0.5, minlen = 2, target = "rules"))
+df_reglas_personal <- as(reglas_personal, "data.frame")
+print(df_reglas_personal) # Para verlas en formato tabla
+```
+
+```{r}
+reglas_motivacion_personal <- apriori(dataset_personal_transaccional, 
+                             parameter = list(support = 0.02, confidence = 0.2, minlen = 2),
+                             appearance = list(rhs = c("Motivation_Level=Bajo",
+                                                       "Motivation_Level=Medio",
+                                                       "Motivation_Level=Alto"), 
+                                               default = "lhs"))
+df_reglas_personal <- as(reglas_motivacion_personal, "data.frame")
+print(df_reglas_personal)
+```
+
+```{r}
+reglas_personal_bajo <- subset(reglas_motivacion_personal, rhs %in% "Motivation_Level=Bajo")
+reglas_personal_medio <- subset(reglas_motivacion_personal, rhs %in% "Motivation_Level=Medio")
+reglas_personal_alto <- subset(reglas_motivacion_personal, rhs %in% "Motivation_Level=Alto")
+```
+
+```{r}
+top_bajo_personal <- head(sort(reglas_personal_bajo, by = "lift", decreasing = TRUE), 20)
+top_medio_personal <- head(sort(reglas_personal_medio, by = "lift", decreasing = TRUE), 20)
+top_alto_personal <- head(sort(reglas_personal_alto, by = "lift", decreasing = TRUE), 20)
+```
+
+```{r}
+top_bajo_sin_redundancia_personal <- top_bajo_personal[!is.redundant(top_bajo_social)]
+top_medio_sin_redundancia_personal <- top_medio_personal[!is.redundant(top_medio_social)]
+top_alto_sin_redundancia_personal <- top_alto_personal[!is.redundant(top_alto_social)]
+```
+
+```{r}
+df_bajo_personal <- as(top_bajo_sin_redundancia_personal, "data.frame")
+df_medio_personal <- as(top_medio_sin_redundancia_personal, "data.frame")
+df_alto_personal <- as(top_alto_sin_redundancia_personal, "data.frame")
+
+View(df_bajo_personal)   # Ver reglas para "Motivation_Level=Bajo"
+View(df_medio_personal)  # Ver reglas para "Motivation_Level=Medio"
+View(df_alto_personal)   # Ver reglas para "Motivation_Level=Alto"
+```
+
+```{r}
+plot(top_bajo_sin_redundancia_personal, method = "graph", engine = "htmlwidget")
+plot(top_medio_sin_redundancia_personal, method = "graph", engine = "htmlwidget")
+plot(top_alto_sin_redundancia_personal, method = "graph", engine = "htmlwidget")
+```
+
+### Análisis motivación baja ámbito personal
+
+Las reglas de asociación indican que la baja motivación personal está influenciada por múltiples factores interrelacionados. Se observa que **las mujeres que realizan mucha actividad física tienden a tener menor motivación**, lo que sugiere que el ejercicio no siempre es un factor protector y que el agotamiento o el estrés pueden jugar un papel importante. Además, **dormir muchas horas parece estar vinculado con menor motivación**, lo que podría indicar fatiga persistente o una relación entre el exceso de sueño y la desmotivación.
+
+Los trastornos del aprendizaje también aparecen como un factor clave en la baja motivación, posiblemente debido a las dificultades académicas y emocionales asociadas, sin que la proximidad al hogar represente una ventaja significativa. Por otro lado, **vivir a una distancia moderada del hogar** parece estar correlacionado con menor motivación, lo que sugiere que un equilibrio inestable entre autonomía y apoyo familiar podría influir negativamente en el estado anímico.
+
+Finalmente, aunque **la actividad física intensa suele asociarse con bienestar, en varios casos se vincula con menor motivación**, lo que podría deberse a sobrecarga o falta de recuperación adecuada. En general, la motivación personal parece depender de una combinación compleja de factores biológicos, psicológicos y contextuales, donde el equilibrio entre descanso, actividad y apoyo emocional es clave.
+
+### Análisis motivación media ámbito personal
+
+Las reglas de asociación muestran que la motivación intermedia está vinculada a factores como la distancia al hogar, el género, las horas de sueño y el nivel de actividad física. **Se observa que los hombres que viven lejos del hogar y no presentan dificultades de aprendizaje tienden a tener una motivación moderada**, lo que sugiere que la independencia geográfica puede generar un equilibrio entre autonomía y responsabilidad sin afectar drásticamente la motivación.
+
+Por otro lado, **dormir muchas horas y realizar poca actividad física es un patrón recurrente en personas con motivación intermedia**, especialmente en mujeres. Esto podría indicar que el descanso prolongado combinado con un estilo de vida más sedentario mantiene un nivel de energía suficiente sin generar el impulso necesario para alcanzar niveles altos de motivación. Además, **quienes viven cerca del hogar y duermen mucho con baja actividad física también presentan motivación intermedia**, lo que sugiere que la proximidad familiar y el descanso pueden proporcionar estabilidad sin necesariamente impulsar un alto rendimiento.
+
+Asimismo, en algunos casos, **dormir pocas horas y realizar mucha actividad física está vinculado con una motivación intermedia**, particularmente en mujeres sin dificultades de aprendizaje, lo que sugiere que el esfuerzo físico puede contrarrestar parcialmente los efectos de la falta de sueño. En general, los datos reflejan que la motivación intermedia suele estar relacionada con un equilibrio entre descanso, actividad y autonomía, sin llegar a los extremos de desmotivación o alta motivación.
+
+### Análisis motivación alta ámbito personal
+
+Las reglas de asociación indican que la alta motivación está influenciada principalmente por la proximidad al hogar, el género masculino, la cantidad de sueño y la actividad física. Se observa que los **hombres que viven cerca de casa tienen mayor motivación**, lo que sugiere que la cercanía al hogar podría proporcionar estabilidad emocional y apoyo, impulsando un mejor desempeño. Además, aquellos **sin dificultades de aprendizaje que combinan esta cercanía con actividad física intensa muestran aún mayor motivación**, destacando el papel del ejercicio en la regulación del estado de ánimo y la energía.
+
+**Dormir muchas horas también aparece como un factor recurrente en quienes tienen alta motivación**, especialmente cuando se combina con actividad física intensa y ser hombre. Esto sugiere que un buen descanso, sumado a un estilo de vida activo, favorece un estado óptimo de energía y concentración. Además, incluso en casos donde **la actividad física es menor, dormir mucho sigue asociado con niveles altos de motivación**, lo que podría indicar que el descanso adecuado por sí solo tiene un impacto positivo en el bienestar y la disposición para las tareas diarias.
+
+Por otro lado, aunque la mayoría de los casos de alta motivación se dan en quienes viven cerca del hogar, también hay una correlación entre vivir lejos y mantener un nivel alto de motivación. Esto podría deberse a que algunas personas encuentran en la distancia un incentivo para ser más autónomas y disciplinadas. En general, los patrones muestran que la alta motivación se construye a partir de un equilibrio entre descanso, actividad física y un entorno de apoyo, donde la cercanía familiar y la autonomía juegan un rol clave dependiendo del contexto individual.
+
+### Conclusiones Generales ámbito personal
+
+La **baja motivación** suele asociarse con dormir muchas horas, realizar mucha actividad física y ser mujer, lo que sugiere que el exceso de descanso o ejercicio pueden generar fatiga o estrés en ciertos contextos. Además, las dificultades de aprendizaje afectan negativamente la motivación, independientemente de la distancia al hogar.
+
+La **motivación intermedia** aparece en personas con hábitos más equilibrados, como dormir mucho pero con poca actividad física, o en hombres que viven lejos del hogar. Esto indica que ciertos niveles de estabilidad y autonomía pueden mantener una motivación moderada sin alcanzar extremos de desmotivación o entusiasmo.
+
+La **alta motivación** se asocia con hombres que viven cerca del hogar, duermen bien y realizan actividad física intensa. Esto sugiere que el apoyo familiar, el descanso adecuado y un estilo de vida activo contribuyen a un mayor nivel de energía y compromiso. Sin embargo, también se observa que vivir lejos puede impulsar la motivación en algunos casos, posiblemente debido a la necesidad de desarrollar autonomía y disciplina.
+
+En general, la motivación es el resultado de un equilibrio entre descanso, actividad y contexto personal, donde tanto el apoyo cercano como la independencia pueden jugar un papel clave según la situación individual.
+
+### **General**
+
+```{r}
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Access_to_Resources", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Teacher_Quality", c(1,2,3), c("Poco Cualificada","Cualificada","Muy Cualificada"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "School_Type_Public", c(0,1), c("No","Sí"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Parental_Involvement", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Family_Income", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Parental_Education_Level", c(1,2,3), c("Estudios Secundarios","Estudios Universitarios","Estudios de Postgrado"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Extracurricular_Activities", c(0,1), c("No","Sí"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Internet_Access", c(0,1), c("No","Sí"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Peer_Influence", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Learning_Disabilities", c(0,1), c("No","Sí"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Distance_from_Home", c(1,2,3), c("Cerca","Moderada", "Lejos"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Gender_Male", c(0,1), c("No","Sí"))
+data_for_cluster_general <- categorizar_columnas(data_for_cluster_general, "Motivation_Level", c(1,2,3), c("Bajo","Medio","Alto"))
+data_for_cluster_general
+
+```
+
+```{r}
+data_for_cluster_general <- discretizar_columnas_numericas(data_for_cluster_general,"Hours_Studied",c("Pocas Horas", "Horas Normales", "Muchas Horas"))
+data_for_cluster_general <- discretizar_columnas_numericas(data_for_cluster_general,"Attendance",c("Poca Asistencia", "Asistencia Normal", "Asiste Con Mucha Fecuencia"))
+data_for_cluster_general <- discretizar_columnas_numericas(data_for_cluster_general,"Exam_Score",c("Baja Calificación", "Buena Calificación", "Mala Calificación"))
+data_for_cluster_general <- discretizar_columnas_numericas(data_for_cluster_general,"Previous_Scores",c("Baja Calificación", "Buena Calificación", "Mala Calificación"))
+data_for_cluster_general <- discretizar_columnas_numericas(data_for_cluster_general,"Tutoring_Sessions",c("No Asiste", "Asiste", "Asiste a Muchas"))
+data_for_cluster_general <- discretizar_columnas_numericas(data_for_cluster_general,"Sleep_Hours",c("Pocas Horas", "Horas Normales", "Muchas Horas"))
+data_for_cluster_general <- discretizar_columnas_numericas(data_for_cluster_general,"Physical_Activity",c("Poca Actividad","Mucha Actividad"))
+data_for_cluster_general
+
+```
+
+```{r}
+dataset_general_transaccional <- as(data_for_cluster_general, "transactions")
+summary(dataset_general_transaccional)
+```
+
+```{r}
+reglas_motivacion_general <- apriori(dataset_general_transaccional, 
+                             parameter = list(support = 0.02, confidence = 0.2, minlen = 2),
+                             appearance = list(rhs = c("Motivation_Level=Bajo",
+                                                       "Motivation_Level=Medio",
+                                                       "Motivation_Level=Alto"), 
+                                               default = "lhs"))
+df_reglas_general<- as(reglas_motivacion_general, "data.frame")
+print(df_reglas_general)
+```
+
+```{r}
+reglas_general_bajo <- subset(reglas_motivacion_general, rhs %in% "Motivation_Level=Bajo")
+reglas_general_medio <- subset(reglas_motivacion_general, rhs %in% "Motivation_Level=Medio")
+reglas_general_alto <- subset(reglas_motivacion_general, rhs %in% "Motivation_Level=Alto")
+```
+
+```{r}
+top_bajo_general <- head(sort(reglas_general_bajo, by = "lift", decreasing = TRUE), 20)
+top_medio_general <- head(sort(reglas_general_medio, by = "lift", decreasing = TRUE), 20)
+top_alto_general <- head(sort(reglas_general_alto, by = "lift", decreasing = TRUE), 20)
+```
+
+```{r}
+top_bajo_sin_redundancia_general <- top_bajo_general[!is.redundant(top_bajo_social)]
+top_medio_sin_redundancia_general <- top_medio_general[!is.redundant(top_medio_social)]
+top_alto_sin_redundancia_general <- top_alto_general[!is.redundant(top_alto_social)]
+```
+
+```{r}
+df_bajo_general <- as(top_bajo_sin_redundancia_general, "data.frame")
+df_medio_general <- as(top_medio_sin_redundancia_general, "data.frame")
+df_alto_general <- as(top_alto_sin_redundancia_general, "data.frame")
+
+View(df_bajo_general)   # Ver reglas para "Motivation_Level=Bajo"
+View(df_medio_general)  # Ver reglas para "Motivation_Level=Medio"
+View(df_alto_general)   # Ver reglas para "Motivation_Level=Alto"
+```
+
+```{r}
+plot(top_bajo_sin_redundancia_general, method = "graph", engine = "htmlwidget")
+plot(top_medio_sin_redundancia_general, method = "graph", engine = "htmlwidget")
+plot(top_alto_sin_redundancia_general, method = "graph", engine = "htmlwidget")
+```
+
+### Análisis motivación baja ámbito general
+
+Las reglas de asociación indican que l**a baja motivación en los estudiantes está fuertemente relacionada con el rendimiento académico, el entorno familiar y el acceso a la tecnología**. Un patrón recurrente es la combinación de calificaciones bajas en los exámenes con horas normales de sueño y un alto acceso a Internet. Aunque se esperaría que un descanso adecuado y el uso de tutorías frecuentes tuvieran un efecto positivo en la motivación, los datos sugieren lo contrario. Esto podría deberse a que el acceso constante a Internet, sin una supervisión adecuada, fomenta la distracción y reduce la efectividad de las estrategias de apoyo académico.
+
+**El nivel socioeconómico también juega un papel clave en la motivación**. Los estudiantes con familias de bajos ingresos, aunque cuenten con docentes cualificados y padres con educación secundaria, tienden a presentar niveles bajos de motivación. Esto sugiere que las dificultades económicas pueden generar estrés y desinterés en los estudios, limitando el impacto positivo de una buena enseñanza. Además, la participación de los padres, cuando es solo moderada, no parece ser suficiente para mejorar la motivación de los alumnos. Esto destaca la importancia de un apoyo familiar más sólido y activo en el proceso educativo.
+
+Otro factor que influye es la presencia de actividades extracurriculares. **Se observó que los estudiantes que no participan en estas actividades, a pesar de dormir lo suficiente y no presentar discapacidades de aprendizaje, tienden a estar menos motivados.** Esto refuerza la idea de que el desarrollo integral del estudiante no depende únicamente del rendimiento académico, sino también de experiencias fuera del aula que fomenten el compromiso y el sentido de pertenencia.
+
+Por otro lado, l**a presión social y la influencia de los pares también afectan la motivación**. Los estudiantes con un alto nivel de influencia de su entorno, en combinación con un bajo ingreso familiar y calificaciones deficientes, presentan mayores niveles de desmotivación. Esto podría indicar que, en ciertos contextos, la falta de recursos económicos y la necesidad de aceptación social generan un impacto negativo en el interés por el aprendizaje.
+
+### Análisis motivación media ámbito general
+
+Las reglas de asociación indican que la motivación media en los estudiantes está influenciada **por una combinación de factores académicos, familiares y sociales**. Un patrón recurrente muestra que los estudiantes **que han obtenido bajas calificaciones previas, pero que han mejorado en exámenes recientes, tienden a tener un nivel de motivación intermedio**. Este comportamiento sugiere que el progreso en el rendimiento académico puede generar un cierto nivel de interés en los estudios, aunque no necesariamente un compromiso elevado. Además, el género también parece influir, ya que los estudiantes varones con esta trayectoria muestran más probabilidades de ubicarse en este nivel de motivación.
+
+**La asistencia regular a clases combinada con una influencia media de los pares también está asociada con la motivación media**. Esto implica que los estudiantes que mantienen una asistencia estable pero están rodeados de un entorno social que no es ni altamente positivo ni negativo, presentan un nivel moderado de motivación. Del mismo modo, aquellos con acceso a recursos educativos y sin discapacidades de aprendizaje, pero que asisten a escuelas públicas y tienen padres con educación secundaria, también tienden a ubicarse en esta categoría. Esto sugiere que, aunque los recursos y el contexto familiar pueden facilitar el aprendizaje, no son suficientes por sí solos para generar una alta motivación.
+
+Otro factor importante es l**a calidad docente y el nivel socioeconómico**. Los estudiantes de ingresos medios, que tienen profesores poco cualificados y no presentan dificultades de aprendizaje, muestran una tendencia a tener una motivación intermedia. Esto indica que, aunque las condiciones económicas no sean un obstáculo, la falta de una enseñanza efectiva puede limitar el entusiasmo de los estudiantes por sus estudios. Por otro lado, los alumnos que estudian muchas horas, tienen acceso a Internet y reciben instrucción de docentes cualificados, pero aun así obtienen malas calificaciones, también presentan motivación media. Esto puede deberse a la frustración generada por el esfuerzo no traducido en buenos resultados, lo que evita que alcancen un alto nivel de motivación.
+
+Las actividades extracurriculares y la participación en tutorías también influyen en este nivel de motivación. Los estudiantes que no realizan actividades fuera del aula, pero que asisten a tutorías, tienen ingresos medios y practican ejercicio con frecuencia, tienden a ubicarse en este rango. Esto refuerza la idea de que, aunque ciertas prácticas pueden mejorar el desempeño, la falta de estímulos adicionales fuera del ámbito académico podría limitar un mayor compromiso con el aprendizaje.
+
+Finalmente, factores como el acceso a Internet, el nivel socioeconómico y la calidad de los docentes también juegan un papel relevante. Aquellos con acceso a la red, que no asisten a tutorías y estudian en escuelas públicas, pero que tienen una influencia social moderada, suelen presentar motivación media. Asimismo, los estudiantes con buenos recursos educativos, enseñanza de calidad y padres con educación secundaria, pero que aún presentan un rendimiento académico deficiente, también muestran esta tendencia. Estos hallazgos sugieren que, aunque ciertos factores pueden fomentar la motivación, no siempre logran impulsarla a un nivel alto, lo que resalta la importancia de una combinación equilibrada de recursos, apoyo social y rendimiento académico para fortalecer el compromiso estudiantil.
+
+### Análisis motivación alta ámbito general
+
+Las reglas de asociación muestran que la motivación alta en los estudiantes no siempre está ligada a un rendimiento académico sobresaliente, sino que depende de una combinación de factores que influyen en su compromiso con el aprendizaje. Un caso interesante es el de aquellos alumnos que, a pesar de obtener malas calificaciones y estudiar en escuelas públicas, muestran **altos niveles de motivación cuando cuentan con acceso a Internet y profesores altamente cualificados.** Esto sugiere que un buen entorno educativo y recursos adecuados pueden fomentar el interés por aprender, incluso cuando el desempeño académico aún no es óptimo.
+
+**Otro patrón destacado es el de los estudiantes con asistencia irregular, pero con acceso a Internet y buenas calificaciones**. Aunque podría pensarse que la falta de asistencia afectaría negativamente la motivación, los datos indican que estos alumnos logran mantenerse motivados, probablemente porque encuentran otras formas de aprendizaje fuera del aula, como el acceso a información en línea o estrategias de estudio autodidactas. Asimismo, los estudiantes que dedican pocas horas al estudio, pero que obtienen buenas calificaciones, también tienden a mostrar alta motivación, lo que puede estar relacionado con una mayor confianza en sus habilidades o un enfoque más eficiente en su aprendizaje.
+
+**El contexto socioeconómico y el género también desempeñan un papel relevante**. Se observa que los estudiantes varones de ingresos medios, a pesar de obtener malas calificaciones, presentan una motivación alta. Esto podría indicar que otros factores, como la presión social o las aspiraciones personales, influyen en su nivel de compromiso. De manera similar, los alumnos con antecedentes de calificaciones bajas, pero que continúan esforzándose, también muestran altos niveles de motivación, lo que sugiere que el deseo de superación personal puede ser un motor importante, independientemente del desempeño previo.
+
+**Las actividades extracurriculares y la participación en tutorías también contribuyen a elevar la motivación**. Los estudiantes que participan activamente en actividades fuera del aula, practican ejercicio y cuentan con docentes altamente cualificados presentan un nivel de motivación superior. Esto refuerza la importancia de un aprendizaje integral que combine el estudio con otras experiencias enriquecedoras. Además, aquellos con un nivel medio de involucramiento parental, acceso a Internet y sin discapacidades de aprendizaje también muestran un mayor compromiso, lo que indica que el apoyo familiar y los recursos digitales pueden desempeñar un papel crucial en su actitud hacia el estudio.
+
+**Finalmente, la educación de los padres es otro factor determinante**. Los estudiantes cuyos padres tienen estudios universitarios, incluso cuando sus calificaciones son bajas, tienden a tener una motivación alta. Esto podría explicarse por el valor que estas familias otorgan a la educación y las expectativas de éxito académico que transmiten a sus hijos. En conclusión, la motivación alta en los estudiantes no depende únicamente de su rendimiento académico, sino de una combinación de apoyo familiar, recursos educativos, acceso a actividades extracurriculares y el entorno de aprendizaje en el que se desenvuelven.
+
+### Conclusiones generales ámbito general
+
+El análisis de las reglas de asociación sobre la motivación estudiantil revela que este factor no está determinado exclusivamente por el rendimiento académico, sino por una combinación de variables socioeconómicas, educativas y personales. Los estudiantes con motivación baja suelen enfrentar barreras como bajos ingresos familiares, falta de involucramiento parental y malas calificaciones, lo que sugiere que un entorno con pocos estímulos y escaso apoyo académico puede afectar negativamente su compromiso con el aprendizaje. A pesar de contar con acceso a Internet y asistir a tutorías, si el entorno familiar y educativo no es favorable, la motivación se mantiene en niveles bajos.
+
+En contraste, la motivación media se observa en estudiantes con características mixtas, como asistencia regular, influencia social moderada y acceso a recursos educativos. Aunque estos alumnos no necesariamente obtienen los mejores resultados, ciertos factores como el apoyo familiar, el acceso a Internet y la participación en tutorías les permiten mantenerse comprometidos en un nivel intermedio. Sin embargo, la falta de consistencia en los estímulos externos y el desempeño académico impide que alcancen una motivación elevada.
+
+Por otro lado, la motivación alta no siempre está relacionada con un rendimiento sobresaliente, sino con el acceso a recursos, el entorno escolar y la percepción del aprendizaje como una oportunidad de desarrollo. Se observa que estudiantes con calificaciones bajas pueden mantenerse altamente motivados cuando cuentan con docentes cualificados, apoyo parental, participación en actividades extracurriculares y acceso a Internet. Además, aquellos con antecedentes académicos deficientes pero con expectativas de mejora también muestran altos niveles de motivación, lo que sugiere que la perseverancia y el entorno educativo positivo pueden ser claves para mantener el compromiso con el aprendizaje.
+
+# ¿Qué factores influyen en la cantidad de horas de estudio?
+
+El rendimiento académico de los estudiantes es un tema ampliamente estudiado en educación, ya que diversos factores pueden influir en su desempeño y hábitos de estudio. Uno de los aspectos fundamentales en la preparación académica es la cantidad de horas que los estudiantes dedican al estudio fuera del horario escolar. En este análisis, buscamos identificar qué factores tienen una relación significativa con las **horas de estudio** a través de random forest.
+
+El propósito principal de este estudio es comprender qué elementos del entorno educativo, familiar y personal pueden fomentar o dificultar la dedicación al estudio. Esto permitirá obtener conclusiones útiles para la mejora de estrategias educativas, la implementación de políticas de apoyo académico y el diseño de intervenciones personalizadas para fomentar hábitos de estudio adecuados.
+
+En este análisis, tomamos **"Hours_Studied"** como la variable dependiente, ya que representa el tiempo que un estudiante dedica a prepararse académicamente fuera del aula. La cantidad de horas de estudio es un indicador clave del esfuerzo individual y puede estar influenciada por factores tanto internos (motivación, salud, etc.) como externos (recursos disponibles, entorno familiar, entre otros).
+
+### Selección de variables
+
+Para este análisis, seleccionamos un conjunto de variables que, con base en la literatura académica y el sentido común, podrían influir en la cantidad de horas de estudio de un estudiante. Estas variables se agrupan en tres categorías principales:
+
+#### **Factores académicos y de apoyo educativo:**
+
+1.  **Attendance (Asistencia a clases)**: Una mayor asistencia puede estar relacionada con hábitos de estudio más estructurados y disciplina académica.
+
+2.  **Tutoring_Sessions (Sesiones de tutoría)**: Los estudiantes que reciben tutorías podrían estar más comprometidos con sus estudios o requerir más tiempo de dedicación académica.
+
+3.  **Previous Score (Calificaciones Anteriores)**: Los estudiantes que reciben mejores calificaciones pueden tener una estrecha relación con las horas de estudio
+
+#### **Factores personales y familiares:**
+
+3.  **Parental_Involvement (Involucramiento parental)**: Un mayor compromiso de los padres en la educación de sus hijos podría fomentar una mayor dedicación al estudio.
+
+4.  **Family_Income (Ingresos familiares)**: Los ingresos pueden afectar el acceso a recursos educativos y el tiempo disponible para estudiar, ya que los estudiantes de familias con menores ingresos podrían tener que dedicar tiempo a responsabilidades laborales o domésticas.
+
+5.  **Motivation_Level (Nivel de motivación)**: La motivación es un factor psicológico clave en la dedicación al estudio.
+
+#### **Factores ambientales y de estilo de vida:**
+
+6.  **Access_to_Resources (Acceso a recursos educativos)**: Contar con materiales de estudio adecuados (libros, tecnología, internet) puede facilitar un mayor tiempo de estudio.
+
+7.  **Internet_Access (Acceso a Internet)**: Puede ser un recurso positivo para el aprendizaje o, en algunos casos, una fuente de distracción.
+
+8.  **Extracurricular_Activities (Actividades extracurriculares)**: La participación en actividades fuera del ámbito académico podría reducir el tiempo disponible para estudiar o, en algunos casos, mejorar la disciplina y la gestión del tiempo.
+
+9.  **Sleep_Hours (Horas de sueño)**: La cantidad de descanso influye en la concentración y el rendimiento académico, lo que podría afectar la dedicación al estudio.
+
+10. **Peer_Influence (Influencia de pares)**: Los amigos y el entorno social pueden tener un impacto positivo o negativo en los hábitos de estudio.
+
+Para responder a la pregunta de investigación, utilizaremos un modelo de **regresión lineal múltiple**, donde la variable dependiente será **Hours_Studied** y las variables seleccionadas actuarán como predictores.
+
+Se evaluará el modelo utilizando métricas como el **R² ajustado** y el **error cuadrático medio (MSE)** para determinar qué tan bien se ajusta el modelo a los datos. Además, se analizarán los coeficientes de regresión y sus niveles de significancia estadística para interpretar la influencia de cada variable en las horas de estudio.
+
+Primero cargamos el dataset ya preprocesado
+
+```{r}
+df_cleaned_regresion <- read.csv("df_cleaned.csv")
+df_cleaned_regresion
+```
+
+Seleccionamos las columnas que vamos a utilizar en el estudio
+
+```{r}
+regresion_columns <- c("Attendance", "Tutoring_Sessions","Parental_Involvement","Family_Income","Motivation_Level","Access_to_Resources","Internet_Access", "Extracurricular_Activities","Peer_Influence","Sleep_Hours", "Previous_Scores","Hours_Studied")
+
+```
+
+Escalamos el dataset preprocesado y nos quedamos con las columnas que hemos seleccionado
+
+```{r}
+df_scaled_regression = as_tibble(scale(df_cleaned_regresion))
+data_for_regression <- select(df_scaled_regression, all_of(regresion_columns))
+data_for_regression
+```
+
+```{r}
+# Cargar la librería randomForest
+library(randomForest)
+
+# Ajustar el modelo Random Forest
+rf_model <- randomForest(Hours_Studied ~ ., data = data_for_regression, ntree = 100)
+
+# Realizar las predicciones con el modelo
+rf_pred <- predict(rf_model, newdata = data_for_regression)
+
+# Calcular el RMSE (Root Mean Square Error)
+rf_rmse <- sqrt(mean((data_for_regression$Hours_Studied - rf_pred)^2))
+
+# Calcular el R² (R-cuadrado)
+rss <- sum((data_for_regression$Hours_Studied - rf_pred)^2)  # Residual sum of squares
+tss <- sum((data_for_regression$Hours_Studied - mean(data_for_regression$Hours_Studied))^2)  # Total sum of squares
+rf_r2 <- 1 - (rss / tss)
+
+# Imprimir resultados
+cat("RMSE Random Forest:", rf_rmse, "\n")
+cat("R² Random Forest:", rf_r2, "\n")
+
+```
+
+```{r}
+importance(rf_model)
+```
+
+```{r}
+varImpPlot(rf_model)
+```
+
+El modelo **Random Forest** ha demostrado un excelente desempeño al predecir `Hours_Studied`, con un **MSE** de **0.5689**, lo que indica una alta precisión en las predicciones. Este bajo error se debe a la capacidad del modelo para capturar relaciones complejas entre las variables, algo que modelos más simples como la regresión no pueden hacer.
+
+Entre las variables más influyentes, destacan:
+
+1.  **Previous_Scores**: Es la variable más importante, lo cual tiene sentido, ya que los puntajes anteriores son un fuerte indicador de las horas de estudio.
+
+2.  **Attendance**: La asistencia a clases también juega un papel crucial; los estudiantes que asisten regularmente tienden a estudiar más.
+
+3.  **Sleep_Hours**: El descanso adecuado está vinculado con una mejor concentración y, por ende, con más horas de estudio.
+
+Otras variables como **Tutoring_Sessions**, **Motivation_Level** y **Parental_Involvement** también son importantes, pero su impacto es menor en comparación con los tres factores anteriores.
+
+En conclusión, el modelo ha identificado correctamente los factores clave que influyen en las horas de estudio, siendo los puntajes previos, la asistencia y el sueño los más determinantes. Este análisis sugiere que mejorar estos aspectos podría tener un impacto significativo en el tiempo que los estudiantes dedican al estudio.
+
+```{r}
+library(caret)
+
+# Definir la validación cruzada de k = 5 (5-fold cross-validation)
+train_control <- trainControl(method = "cv", number = 5)
+
+# Ajustar el modelo con validación cruzada
+rf_model_cv <- train(Hours_Studied ~ ., data = data_for_regression, method = "rf", trControl = train_control)
+
+# Ver el rendimiento del modelo (RMSE promedio)
+cat("RMSE Random Forest (con validación cruzada):", rf_model_cv$results$RMSE, "\n")
+
+# Ver la importancia de las variables
+importance(rf_model_cv$finalModel)
+
+# Obtener el R²
+rf_r2 <- 1 - (sum((data_for_regression$Hours_Studied - rf_model_cv$pred$pred)^2) / sum((data_for_regression$Hours_Studied - mean(data_for_regression$Hours_Studied))^2))
+cat("R² Random Forest:", rf_r2, "\n")
+```
+
+```{r}
+varImpPlot(rf_model)
+```
+
+El modelo **Random Forest** con validación cruzada mostró un **RMSE** de **1.01** y un **R²** de **1**, lo que indica un desempeño sobresaliente en este conjunto de datos. Sin embargo, el modelo anterior, con un **RMSE** de **0.56** y un **R²** de **0.67**, también mostró un rendimiento fuerte, aunque con un **R²** más bajo, lo que sugiere que el modelo anterior, aunque algo menos preciso en cuanto a la explicación de la variabilidad (por el valor de R²), tenía un error de predicción significativamente menor.
+
+Las **variables más relevantes** siguen siendo las mismas en ambos modelos, destacando **`Attendance`**, **`Previous_Scores`** y **\`Sleep_Hours**. Estas variables muestran consistentemente su importancia en la predicción de las horas de estudio, lo que reafirma su relación significativa con el comportamiento de los estudiantes.
+
+```{r}
+
+```

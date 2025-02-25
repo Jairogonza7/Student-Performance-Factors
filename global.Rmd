@@ -470,6 +470,30 @@ academic_columns <- c("Hours_Studied", "Attendance", "Exam_Score", "Previous_Sco
 support_columns <- c("Learning_Disabilities", "Tutoring_Sessions", "Access_to_Resources")
 resource_columns <- c("Family_Income", "Access_to_Resources", "Internet_Access", "Parental_Education_Level")
 extra_columns <- c("Extracurricular_Activities", "Physical_Activity", "Peer_Influence")
+general_columns <- c(
+  "Hours_Studied",
+  "Attendance",
+  "Parental_Involvement",
+  "Access_to_Resources",
+  "Extracurricular_Activities",
+  "Sleep_Hours",
+  "Previous_Scores",
+  "Motivation_Level",
+  "Internet_Access",
+  "Tutoring_Sessions",
+  "Family_Income",
+  "Teacher_Quality",
+  "School_Type_Private",
+  "School_Type_Public",
+  "Peer_Influence",
+  "Physical_Activity",
+  "Learning_Disabilities",
+  "Parental_Education_Level",
+  "Distance_from_Home",
+  "Gender_Male",
+  "Gender_Female",
+  "Exam_Score"
+)
 ```
 
 ```{r}
@@ -479,7 +503,7 @@ data_for_cluster_academic <- select(df_scaled, all_of(academic_columns))
 data_for_cluster_support <- select(df_scaled, all_of(support_columns))
 data_for_cluster_resource <- select(df_scaled, all_of(resource_columns))
 data_for_cluster_extra <- select(df_scaled, all_of(extra_columns))
-data_for_cluster_general <- df_scaled
+data_for_cluster_general <- select(df_scaled, all_of(general_columns))
 ```
 
 Para agrupar a los alumnos según estas categorías, utilizaremos el método de **clustering K-Means**.
@@ -545,7 +569,7 @@ print_clustering_results <- function(df_with_clusters, data_for_cluster, columns
 find_optimal_clusters <- function(data) {
   
   result <- NbClust(data, diss = NULL, distance = "euclidean", 
-                    min.nc = 2, max.nc = 6, method = "kmeans")
+                    min.nc = 2, max.nc = 4, method = "kmeans")
   
   # Retorna el número óptimo de clusters sugerido
   return(result)
@@ -698,11 +722,11 @@ El análisis realizado revela que la participación en **actividades extracurric
 #### General
 
 ```{r}
-compare_k(data_for_cluster_extra)
+compare_k(data_for_cluster_general)
 ```
 
 ```{r}
-optimal_clusters_extra <- find_optimal_clusters(data_for_cluster_extra)
+optimal_clusters_general <- find_optimal_clusters(data_for_cluster_general)
 ```
 
 ```{r}
