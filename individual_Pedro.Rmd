@@ -522,6 +522,16 @@ for (name in colnames(data_for_cluster_personal)) {
 }
 ```
 
+En cuanto a la distancia desde el hogar, la mayoría de los individuos viven cerca, mientras que un número menor reside a una distancia moderada o lejana. Esto podría influir en factores como el tiempo de traslado y su impacto en otras variables como el descanso o la actividad física.
+
+Respecto a las horas de sueño, la distribución parece estar equilibrada entre quienes duermen pocas y muchas horas, aunque con una ligera inclinación hacia aquellos que duermen más. Este aspecto podría estar relacionado con el bienestar y el rendimiento diario de los individuos.
+
+En términos de actividad física, los datos sugieren que la mayoría de las personas llevan un estilo de vida con poca actividad, aunque existe un grupo considerable con mayor nivel de ejercicio. Esto puede ser relevante para analizar su impacto en la salud y el estado de ánimo.
+
+La variable de género indica una distribución bastante equilibrada entre hombres y mujeres, sin una diferencia significativa en la cantidad de individuos representados en cada grupo.
+
+Por último, en cuanto al nivel de motivación, se observa que la mayoría de las personas presentan un nivel medio de motivación, seguido del alto y, en menor medida, del bajo. Esto sugiere una tendencia general hacia una motivación moderada dentro del grupo analizado.
+
 ```{r}
 dataset_personal_transaccional <- as(data_for_cluster_personal, "transactions")
 summary(dataset_personal_transaccional)
@@ -779,7 +789,7 @@ Para este análisis, seleccionamos un conjunto de variables que, con base en la 
 
 Para responder a la pregunta de investigación, utilizaremos un modelo de **regresión lineal múltiple**, donde la variable dependiente será **Hours_Studied** y las variables seleccionadas actuarán como predictores.
 
-Se evaluará el modelo utilizando métricas como el **R² ajustado** y el **error cuadrático medio (MSE)** para determinar qué tan bien se ajusta el modelo a los datos. Además, se analizarán los coeficientes de regresión y sus niveles de significancia estadística para interpretar la influencia de cada variable en las horas de estudio.
+Se evaluará el modelo utilizando métricas como el **R² ajustado** y el **error cuadrático medio (MSE)** para determinar qué tan bien se ajusta el modelo a los datos. Además, se analizarán los coeficientes y sus niveles de significancia estadística para interpretar la influencia de cada variable en las horas de estudio.
 
 Primero cargamos el dataset ya preprocesado
 
