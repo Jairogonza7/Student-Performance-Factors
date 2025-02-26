@@ -1100,9 +1100,9 @@ test_data <- data_notas_alta_simplificado[-indices, ]
 ```
 
 ```{r}
-library(MASS)
-model_reduced <- stepAIC(lm(Horas_Semanales_Work ~ .^2, data = train_data), direction = "both")
-summary(model_reduced)
+#library(MASS)
+#model_reduced <- stepAIC(lm(Horas_Semanales_Work ~ .^2, data = train_data), direction = "both")
+#summary(model_reduced)
 ```
 
 ```{r}
@@ -1119,3 +1119,385 @@ residuos <- comparacion$Real - comparacion$Predicha
 rmse <- sqrt(mean(residuos^2))
 print(paste("RMSE: ", rmse))
 ```
+
+
+### Análisis del Desempeño Académico y Factores que Influyen en la Mejora del Estudiante 
+
+#### Introducción
+
+¿Cuáles son los factores clave que determinan si un estudiante mejorará su rendimiento académico?
+
+El objetivo de este estudio es identificar los factores que influyen en la mejora del rendimiento académico de los estudiantes.
+Para lograrlo, se han utilizado técnicas de aprendizaje automático que permiten analizar grandes volúmenes de datos y extraer patrones que pueden ser utilizados para la toma de decisiones en el ámbito educativo.
+
+Dado que las variables del conjunto de datos no presentaban una correlación lineal significativa entre sí, se descartaron métodos estadísticos tradicionales y se optó por modelos basados en árboles de decisión, que permiten capturar relaciones complejas entre las variables y generar reglas interpretables.
+
+
+#### Preparación y Exploración de Datos
+
+Se parte de un conjunto de datos estructurado con múltiples variables relacionadas con el desempeño académico de los estudiantes, incluyendo horas de estudio, asistencia, nivel de motivación, acceso a recursos, entre otros. Concretamente para responder a esta pregunta se usará el conjunto de datos ya preprocesado "df_cleaned".
+
+Para entender mejor la distribución de las calificaciones, se generaron histogramas de Exam_Score y Previous_Scores:
+
+```{r}
+# Distribución de Exam_Score
+ggplot(df_cleaned, aes(x = Exam_Score)) +
+  geom_histogram(bins = 20, fill = "blue", alpha = 0.7) +
+  labs(title = "Distribución de Exam_Score", x = "Exam Score", y = "Frecuencia")
+
+# Distribución de Previous_Scores
+ggplot(df_cleaned, aes(x = Previous_Scores)) +
+  geom_histogram(bins = 20, fill = "red", alpha = 0.7) +
+  labs(title = "Distribución de Previous_Scores", x = "Previous Scores", y = "Frecuencia")
+
+```
+'Exam_Score' tiene poca variabilidad, con la mayoría de los estudiantes en el rango de 60 a 75 puntos.
+'Previous_Scores' tiene una distribución más uniforme, lo que sugiere que podría ser una mejor variable predictora.
+
+
+Debido a la baja variabilidad en Exam_Score, decidimos intentar predecir High_Score en lugar de Exam_Score directamente.
+
+El conjunto de datos no contenía una variable explícita para clasificar el rendimiento de los estudiantes.
+Para abordar este problema, se creó la variable High_Score, que clasifica a los estudiantes en alto rendimiento y bajo rendimiento con base en su calificación final (Exam_Score).
+
+```{r}
+# Crear la variable High_Score (1 si el Exam_Score >= 80, 0 si es menor)
+df_cleaned$High_Score <- ifelse(df_cleaned$Previous_Scores >= 80, 1, 0)
+
+# Ver distribución
+table(df_cleaned$High_Score)
+
+```
+
+Se seleccionó un umbral de 80 puntos para definir un "alto rendimiento" porque permite diferenciar a los estudiantes con desempeño notable del resto.
+Esta clasificación se utilizará en los modelos para predecir qué factores influyen en que un estudiante alcance un alto rendimiento.
+
+
+### Modelos Utilizados
+
+Para identificar los factores que más influyen en el rendimiento de los estudiantes, se probaron distintos modelos:
+
+1. Regresión Logística
+2. Random Forest
+3. XGBoost
+4. Árbol de Decisión (Mejor Modelo)
+
+##### 1. Regresión Logística
+La regresión logística se utilizó inicialmente para predecir High_Score en función de las demás variables.
+
+```{r}
+# Entrenar modelo de Regresión Logística
+model <- glm(High_Score ~ ., data = df_cleaned %>% select(-Exam_Score), family = binomial)
+
+# Hacer predicciones
+y_prob <- predict(model, newdata = df_cleaned, type = "response")
+y_pred <- ifelse(y_prob >= 0.5, 1, 0)
+
+# Evaluación
+accuracy <- mean(y_pred == df_cleaned$High_Score)
+print(paste("Accuracy:", accuracy))
+
+```
+Precisión = 99.9%, lo cual es demasiado alto para ser realista.
+Se detectó sobreajuste, ya que Previous_Scores predecía High_Score casi perfectamente.
+Conclusión: No es un modelo útil para este análisis
+
+##### 2. Random Forest
+Se probó Random Forest para capturar relaciones no lineales entre variables.
+
+```{r}
+# Cargar librerías necesarias
+library(randomForest)
+library(caret)
+
+# Dividir datos en entrenamiento (70%) y prueba (30%)
+set.seed(42)
+trainIndex <- createDataPartition(df_cleaned$High_Score, p = 0.7, list = FALSE)
+trainData <- df_cleaned[trainIndex, ]
+testData  <- df_cleaned[-trainIndex, ]
+
+# Entrenar el modelo Random Forest (corrigiendo parámetros)
+rf_model <- randomForest(factor(High_Score) ~ ., 
+                         data = trainData %>% select(-Exam_Score), 
+                         ntree = 200,  # Reducimos el número de árboles
+                         mtry = floor(sqrt(ncol(trainData) - 1)),  # Ajustamos número de variables por árbol
+                         importance = TRUE)
+
+# Hacer predicciones en el conjunto de prueba
+rf_pred <- predict(rf_model, newdata = testData, type = "class")
+
+# Evaluar precisión del modelo
+rf_accuracy <- mean(rf_pred == testData$High_Score)
+print(paste("Random Forest Accuracy:", rf_accuracy))
+
+# Matriz de confusión
+rf_conf_matrix <- table(Predicted = rf_pred, Actual = testData$High_Score)
+print("Random Forest Confusion Matrix:")
+print(rf_conf_matrix)
+
+# Importancia de las variables
+importance_df <- as.data.frame(importance(rf_model))
+importance_df$Variable <- rownames(importance_df)
+importance_df <- importance_df[order(-importance_df$MeanDecreaseGini), ]
+
+# Visualizar importancia de variables
+print("Variable Importance in Random Forest:")
+print(importance_df)
+
+# Visualización gráfica de importancia de variables
+library(ggplot2)
+ggplot(importance_df, aes(x = reorder(Variable, -MeanDecreaseGini), y = MeanDecreaseGini)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Importancia de Variables en Random Forest", x = "Variables", y = "Importancia Gini")
+
+
+
+```
+#### 3. XGBoost
+
+```{r}
+# Cargar librería
+library(xgboost)
+
+# Preparar datos en formato de matriz para XGBoost
+train_matrix <- model.matrix(High_Score ~ . -1, data = trainData %>% select(-Exam_Score))
+test_matrix  <- model.matrix(High_Score ~ . -1, data = testData %>% select(-Exam_Score))
+
+# Convertir a formato DMatrix de XGBoost
+dtrain <- xgb.DMatrix(data = train_matrix, label = trainData$High_Score)
+dtest  <- xgb.DMatrix(data = test_matrix, label = testData$High_Score)
+
+# Definir hiperparámetros del modelo
+params <- list(
+  objective = "binary:logistic",  # Clasificación binaria
+  eval_metric = "error",  # Evaluar por tasa de error
+  eta = 0.1,  # Tasa de aprendizaje
+  max_depth = 6,  # Profundidad máxima del árbol
+  subsample = 0.8,  # Porcentaje de muestras usadas en cada iteración
+  colsample_bytree = 0.8  # Proporción de variables usadas en cada árbol
+)
+
+# Entrenar el modelo XGBoost
+set.seed(42)
+xgb_model <- xgb.train(params, dtrain, nrounds = 100, watchlist = list(train = dtrain, test = dtest), verbose = 0)
+
+# Hacer predicciones
+xgb_pred_prob <- predict(xgb_model, dtest)
+xgb_pred <- ifelse(xgb_pred_prob > 0.5, 1, 0)
+
+# Evaluar precisión del modelo
+xgb_accuracy <- mean(xgb_pred == testData$High_Score)
+print(paste("XGBoost Accuracy:", xgb_accuracy))
+
+# Matriz de confusión
+xgb_conf_matrix <- table(Predicted = xgb_pred, Actual = testData$High_Score)
+print("XGBoost Confusion Matrix:")
+print(xgb_conf_matrix)
+
+# Importancia de variables en XGBoost
+importance_matrix <- xgb.importance(model = xgb_model)
+print("Feature Importance in XGBoost:")
+print(importance_matrix)
+
+```
+
+
+
+#### 4. Árbol de Decisión
+
+
+
+
+```{r}
+# Cargar librerías necesarias
+library(rpart)
+library(rpart.plot)
+library(ggplot2)
+
+# Dividir datos en entrenamiento y prueba
+set.seed(42)
+trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
+trainData <- df_cleaned[trainIndex, ]
+testData  <- df_cleaned[-trainIndex, ]
+
+# Entrenar el Árbol de Decisión Optimizado
+tree_model <- rpart(Improved ~ ., 
+                    data = trainData %>% select(-Exam_Score, -Previous_Scores, -Score_Improvement), 
+                    method = "class", 
+                    control = rpart.control(cp = 0.005, minsplit = 10, maxdepth = 7))
+
+# Mejora de la visualización con rpart.plot()
+rpart.plot(tree_model, 
+           type = 2,  # Árbol detallado con nodos rectangulares
+           extra = 104,  # Mostrar porcentaje de datos en cada nodo
+           box.palette = "BuGn",  # Paleta de colores para los nodos
+           tweak = 1.2,  # Ajuste del tamaño del árbol
+           main = "Árbol de Decisión Mejorado")
+
+# Guardar imagen en alta resolución
+png("Decision_Tree_Optimized.png", width = 1200, height = 800)
+rpart.plot(tree_model, type = 2, extra = 104, box.palette = "BuGn", tweak = 1.2, main = "Árbol de Decisión Mejorado")
+dev.off()
+
+# Hacer predicciones con el modelo optimizado
+tree_pred <- predict(tree_model, newdata = testData, type = "class")
+
+# Evaluar el modelo optimizado
+tree_accuracy <- mean(tree_pred == testData$Improved)
+tree_conf_matrix <- table(Predicted = tree_pred, Actual = testData$Improved)
+
+# Mostrar resultados
+print(paste("Optimized Decision Tree Accuracy:", tree_accuracy))
+print("Optimized Decision Tree Confusion Matrix:")
+print(tree_conf_matrix)
+
+```
+
+* Si un estudiante ya tiene una calificación alta (High_Score = 1), no se espera una mejora significativa. Es decir, los estudiantes con alto rendimiento tienen menos margen de mejora.
+
+* La asistencia a clases es un factor fundamental para mejorar el rendimiento académico. Si la asistencia (Attendance) es menor a 84%, la probabilidad de mejora es baja (35% de mejora).
+Si la asistencia es mayor o igual a 84%, se consideran otros factores adicionales que pueden influir en la mejora.
+
+* Si Attendance >= 84%, la distancia al colegio (Distance_from_Home) afecta la mejora:
+
+    * Si un estudiante vive a más de 3 km, la probabilidad de mejora es 33%.
+    * Si un estudiante vive a menos de 3 km, se evalúan otros factores como las horas de estudio.
+En conclusión, los estudiantes que viven más lejos tienen menos probabilidad de mejorar, posiblemente debido a tiempos de traslado prolongados y fatiga.
+Si un estudiante estudia menos de 20 horas semanales, la tutoría (Tutoring_Sessions) se convierte en un factor relevante:
+
+* Si Tutoring_Sessions < 0.38, la probabilidad de mejorar es 41%.
+Si Tutoring_Sessions >= 0.38, la probabilidad de mejora aumenta a 54%.
+
+*Si un estudiante estudia más de 20 horas semanales, la probabilidad de mejorar es 57%. Sin embargo, en este caso, el nivel de involucramiento parental (Parental_Involvement) comienza a ser un factor clave:
+
+* Si Parental_Involvement < 3, la asistencia del estudiante se vuelve un elemento determinante:
+    * Si Attendance < 97%, la probabilidad de mejora es 13%.
+    * Si Attendance >= 97%, la probabilidad de mejora aumenta a 33%.
+* Si Parental_Involvement >= 3, la probabilidad de mejora es 67%.
+En conclusión, estudiar más de 20 horas a la semana aumenta significativamente la probabilidad de mejora. Para los estudiantes con menos horas de estudio, recibir tutorías ayuda a mejorar su rendimiento. Además, un alto nivel de involucramiento parental y una asistencia superior al 97% pueden compensar la falta de apoyo familiar.
+
+
+
+
+```{r}
+# Cargar librerías necesarias
+library(ggplot2)
+library(gganimate)
+library(gifski)
+library(rpart)
+library(dplyr)
+
+# Dividir datos en entrenamiento y prueba
+set.seed(42)
+trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
+trainData <- df_cleaned[trainIndex, ]
+testData  <- df_cleaned[-trainIndex, ]
+
+# Entrenar el Árbol de Decisión
+tree_model <- rpart(Improved ~ Attendance + Hours_Studied + Tutoring_Sessions, 
+                    data = trainData, 
+                    method = "class", 
+                    control = rpart.control(cp = 0.005, minsplit = 10, maxdepth = 4))
+
+# Definir los pasos del árbol con etiquetas mejoradas
+testData <- testData %>%
+  mutate(
+    step = case_when(
+      Attendance < 84 ~ "Paso 1: Asistencia < 84% (Rojo)", 
+      Hours_Studied < 20 ~ "Paso 2: Horas de Estudio < 20 (Azul)", 
+      Tutoring_Sessions < 0.38 ~ "Paso 3: Tutorías < 0.38 (Verde)", 
+      TRUE ~ "Paso 4: Segmentación Final (Morado)"
+    ),
+    classification = as.factor(Improved) # Guardamos la clasificación
+  )
+
+# Asignar colores a las fases del árbol
+color_mapping <- c("Paso 1: Asistencia < 84% (Rojo)" = "red", 
+                   "Paso 2: Horas de Estudio < 20 (Azul)" = "blue", 
+                   "Paso 3: Tutorías < 0.38 (Verde)" = "green",
+                   "Paso 4: Segmentación Final (Morado)" = "purple")
+
+# Asignar colores específicos a la clasificación
+classification_colors <- c("0" = "black", "1" = "yellow") # Mayor contraste
+
+# Crear una tabla con las reglas del árbol
+tree_rules <- data.frame(
+  step = c(1, 2, 3, 4), 
+  rule = c(
+    "Inicio: Todos los datos",
+    "División: Asistencia < 84%",
+    "División: Horas de Estudio < 20",
+    "División: Tutorías < 0.38"
+  )
+)
+
+# Crear la animación con colores mejorados y movimiento más fluido
+animated_plot <- ggplot(testData, aes(x = Attendance, y = Hours_Studied, 
+                                      color = classification)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_vline(xintercept = 84, linetype = "dashed", color = "red", size = 1) +  # Regla de asistencia
+  geom_hline(yintercept = 20, linetype = "dashed", color = "blue", size = 1) + # Regla de horas de estudio
+  labs(title = "Proceso de Decisión en el Árbol de Decisión", 
+       subtitle = "{tree_rules$rule[as.integer(frame_time)]}", 
+       x = "Asistencia (%)", 
+       y = "Horas de Estudio por Semana") +
+  scale_color_manual(values = classification_colors, name = "Clasificación Final") +  # Ahora los colores representan 0 o 1
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
+  transition_states(as.integer(as.factor(step)), 
+                    transition_length = 4, # Hace la transición más larga y fluida
+                    state_length = 2) + # Tiempo de pausa entre pasos reducido para continuidad
+  ease_aes('linear')  # Movimiento más continuo
+
+# Guardar y mostrar animación con duración más lenta y fluida
+animate(animated_plot, duration = 12, fps = 8, renderer = gifski_renderer()) # 12s de duración
+anim_save("decision_tree_animation_smooth.gif")
+
+
+```
+```{r}
+# Cargar librerías necesarias
+library(plotly)
+library(rpart)
+library(dplyr)
+
+# Dividir datos en entrenamiento y prueba
+set.seed(42)
+trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
+trainData <- df_cleaned[trainIndex, ]
+testData  <- df_cleaned[-trainIndex, ]
+
+# Entrenar el Árbol de Decisión
+tree_model <- rpart(Improved ~ Attendance + Hours_Studied + Tutoring_Sessions, 
+                    data = trainData, 
+                    method = "class", 
+                    control = rpart.control(cp = 0.005, minsplit = 10, maxdepth = 4))
+
+# Definir los pasos del árbol
+testData <- testData %>%
+  mutate(
+    step = case_when(
+      Attendance < 84 ~ "Paso 1: Asistencia < 84%",
+      Hours_Studied < 20 ~ "Paso 2: Horas de Estudio < 20",
+      Tutoring_Sessions < 0.38 ~ "Paso 3: Tutorías < 0.38",
+      TRUE ~ "Paso 4: Segmentación Final"
+    )
+  )
+
+# Crear la visualización interactiva
+interactive_plot <- plot_ly(testData, x = ~Attendance, y = ~Hours_Studied, color = ~step, 
+                            colors = c("red", "blue", "green", "purple"),
+                            type = 'scatter', mode = 'markers',
+                            text = ~paste("Tutorías:", Tutoring_Sessions, "<br>Mejora:", Improved)) %>%
+  layout(title = "Evolución de las Decisiones en el Árbol de Decisión",
+         xaxis = list(title = "Asistencia (%)"),
+         yaxis = list(title = "Horas de Estudio por Semana"),
+         legend = list(title = list(text = "Etapa de Segmentación")))
+
+# Mostrar el gráfico interactivo
+interactive_plot
+
+```
+
