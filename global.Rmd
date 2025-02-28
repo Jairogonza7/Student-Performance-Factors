@@ -456,8 +456,13 @@ clean_and_filter_data <- function(data) {
 df_cleaned <- clean_and_filter_data(data)
 ```
 
+
+Vamos a guardar df_cleaned en la carpeta 'data' para poder hacer uso del dataset preprocesado en las preguntas individuales:
+
 ```{r}
 df_cleaned
+write.csv(df_cleaned, file = "data/df_cleaned.csv", row.names = FALSE)
+
 ```
 
 Después de la codificación, nuestro dataset consta de estos tipos:
