@@ -1331,11 +1331,7 @@ Además, desde el punto de vista de la pregunta central de este análisis, quere
 academic_columns <- c("Hours_Studied","Motivation_Level","Sleep_Hours", "Attendance", "Exam_Score", "Previous_Scores", "Previous_Scores_Category")
 support_columns <- c("Learning_Disabilities", "Tutoring_Sessions", "Parental_Involvement")
 resource_columns <- c("Family_Income", "Access_to_Resources", "Internet_Access", "Parental_Education_Level")
-<<<<<<< HEAD
 social_columns <- c("Extracurricular_Activities", "Physical_Activity", "Peer_Influence")
-=======
-extra_columns <- c("Extracurricular_Activities", "Physical_Activity", "Peer_Influence")
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 general_columns <- c(
   "Hours_Studied",
   "Attendance",
@@ -1349,21 +1345,11 @@ general_columns <- c(
   "Tutoring_Sessions",
   "Family_Income",
   "Teacher_Quality",
-<<<<<<< HEAD
-=======
-  "School_Type_Private",
-  "School_Type_Public",
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
   "Peer_Influence",
   "Physical_Activity",
   "Learning_Disabilities",
   "Parental_Education_Level",
   "Distance_from_Home",
-<<<<<<< HEAD
-=======
-  "Gender_Male",
-  "Gender_Female",
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
   "Exam_Score"
 )
 ```
@@ -1374,11 +1360,7 @@ df_scaled = as_tibble(scale(df_cleaned))
 data_for_cluster_academic <- select(df_scaled, all_of(academic_columns))
 data_for_cluster_support <- select(df_scaled, all_of(support_columns))
 data_for_cluster_resource <- select(df_scaled, all_of(resource_columns))
-<<<<<<< HEAD
 data_for_cluster_social <- select(df_scaled, all_of(social_columns))
-=======
-data_for_cluster_extra <- select(df_scaled, all_of(extra_columns))
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 data_for_cluster_general <- select(df_scaled, all_of(general_columns))
 ```
 
@@ -1599,7 +1581,6 @@ El análisis realizado revela que la participación en **actividades extracurric
 
 ```{r}
 compare_k(data_for_cluster_general)
-<<<<<<< HEAD
 ```
 
 
@@ -1609,12 +1590,6 @@ optimal_clusters_general <- find_optimal_clusters(data_for_cluster_general)
 
 ```{r}
 df_cluster_general <- applying_kmeans(data_for_cluster_general, 6)
-=======
-```
-
-```{r}
-optimal_clusters_general <- find_optimal_clusters(data_for_cluster_general)
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 ```
 
 ```{r}
@@ -1795,11 +1770,7 @@ Dado que las variables del conjunto de datos no presentaban una correlación lin
 
 #### Preparación y Exploración de Datos
 
-<<<<<<< HEAD
 Se parte de un conjunto de datos estructurado con múltiples variables relacionadas con el desempeño académico de los estudiantes, incluyendo horas de estudio, asistencia, nivel de motivación, acceso a recursos, entre otros. Concretamente para responder a esta pregunta se usará el conjunto de datos ya preprocesado **"df_cleaned"**.
-=======
-Se parte de un conjunto de datos estructurado con múltiples variables relacionadas con el desempeño académico de los estudiantes, incluyendo horas de estudio, asistencia, nivel de motivación, acceso a recursos, entre otros. Concretamente para responder a esta pregunta se usará el conjunto de datos ya preprocesado "df_cleaned".
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 
 Para entender mejor la distribución de las calificaciones, se generaron histogramas de Exam_Score y Previous_Scores:
 
@@ -1815,22 +1786,13 @@ ggplot(df_cleaned, aes(x = Previous_Scores)) +
   labs(title = "Distribución de Previous_Scores", x = "Previous Scores", y = "Frecuencia")
 
 ```
-<<<<<<< HEAD
+
 `Exam_Score` tiene **poca variabilidad**, con la mayoría de los estudiantes en el rango de **60 a 75 puntos**.
 `Previous_Scores` tiene una distribución más uniforme, lo que sugiere que podría ser una mejor variable predictora. Debido a la baja variabilidad en `Exam_Score`, decidimos intentar predecir **High_Score** en lugar de Exam_Score directamente.
 
 El conjunto de datos no contenía una variable explícita para clasificar el rendimiento de los estudiantes.
 Para abordar este problema, se creó la variable `High_Score`, que **clasifica a los estudiantes en alto rendimiento y bajo rendimiento con base en sus calificaciones previamente obtenidas (Previous_Score)**.
-=======
-'Exam_Score' tiene poca variabilidad, con la mayoría de los estudiantes en el rango de 60 a 75 puntos.
-'Previous_Scores' tiene una distribución más uniforme, lo que sugiere que podría ser una mejor variable predictora.
 
-
-Debido a la baja variabilidad en Exam_Score, decidimos intentar predecir High_Score en lugar de Exam_Score directamente.
-
-El conjunto de datos no contenía una variable explícita para clasificar el rendimiento de los estudiantes.
-Para abordar este problema, se creó la variable High_Score, que clasifica a los estudiantes en alto rendimiento y bajo rendimiento con base en su calificación final (Exam_Score).
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 
 ```{r}
 # Crear la variable High_Score (1 si el Exam_Score >= 80, 0 si es menor)
@@ -1838,16 +1800,10 @@ df_cleaned$High_Score <- ifelse(df_cleaned$Previous_Scores >= 80, 1, 0)
 
 # Ver distribución
 table(df_cleaned$High_Score)
-<<<<<<< HEAD
 ```
 
 Se seleccionó un **umbral de calificación de un 8** para definir un "alto rendimiento" porque permite diferenciar a los estudiantes con desempeño notable del resto.
-=======
 
-```
-
-Se seleccionó un umbral de 80 puntos para definir un "alto rendimiento" porque permite diferenciar a los estudiantes con desempeño notable del resto.
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 Esta clasificación se utilizará en los modelos para predecir qué factores influyen en que un estudiante alcance un alto rendimiento.
 
 
@@ -1855,7 +1811,6 @@ Esta clasificación se utilizará en los modelos para predecir qué factores inf
 
 Para identificar los factores que más influyen en el rendimiento de los estudiantes, se probaron distintos modelos:
 
-<<<<<<< HEAD
 **1. Regresión Logística**
 
 **2. Random Forest**
@@ -1863,12 +1818,7 @@ Para identificar los factores que más influyen en el rendimiento de los estudia
 **3. XGBoost**
 
 **4. Árbol de Decisión (Mejor Modelo)**
-=======
-1. Regresión Logística
-2. Random Forest
-3. XGBoost
-4. Árbol de Decisión (Mejor Modelo)
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
+
 
 ##### 1. Regresión Logística
 La regresión logística se utilizó inicialmente para predecir High_Score en función de las demás variables.
@@ -1891,20 +1841,10 @@ Se detectó sobreajuste, ya que Previous_Scores predecía High_Score casi perfec
 Conclusión: No es un modelo útil para este análisis
 
 ##### 2. Random Forest
-<<<<<<< HEAD
 
 Se probó Random Forest para capturar relaciones no lineales entre variables.
 
 ```{r}
-=======
-Se probó Random Forest para capturar relaciones no lineales entre variables.
-
-```{r}
-# Cargar librerías necesarias
-library(randomForest)
-library(caret)
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
-
 # Dividir datos en entrenamiento (70%) y prueba (30%)
 set.seed(42)
 trainIndex <- createDataPartition(df_cleaned$High_Score, p = 0.7, list = FALSE)
@@ -1940,10 +1880,6 @@ print("Variable Importance in Random Forest:")
 print(importance_df)
 
 # Visualización gráfica de importancia de variables
-<<<<<<< HEAD
-=======
-library(ggplot2)
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 ggplot(importance_df, aes(x = reorder(Variable, -MeanDecreaseGini), y = MeanDecreaseGini)) +
   geom_bar(stat = "identity", fill = "steelblue") +
   coord_flip() +
@@ -1955,12 +1891,6 @@ ggplot(importance_df, aes(x = reorder(Variable, -MeanDecreaseGini), y = MeanDecr
 #### 3. XGBoost
 
 ```{r}
-<<<<<<< HEAD
-=======
-# Cargar librería
-library(xgboost)
-
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 # Preparar datos en formato de matriz para XGBoost
 train_matrix <- model.matrix(High_Score ~ . -1, data = trainData %>% select(-Exam_Score))
 test_matrix  <- model.matrix(High_Score ~ . -1, data = testData %>% select(-Exam_Score))
@@ -2003,18 +1933,7 @@ print(importance_matrix)
 
 ```
 
-<<<<<<< HEAD
 #### 4. Árbol de Decisión
-
-
-```{r}
-=======
-
-
-#### 4. Árbol de Decisión
-
-
-
 
 ```{r}
 # Cargar librerías necesarias
@@ -2062,7 +1981,7 @@ print(tree_conf_matrix)
 
 ```
 
-<<<<<<< HEAD
+
 * Si un estudiante ya tiene una calificación alta (High_Score = 1), **no se espera una mejora significativa**. Es decir, los estudiantes con alto rendimiento tienen menos margen de mejora.
 
 * La asistencia a clases es un factor fundamental para mejorar el rendimiento académico. Si la asistencia (Attendance) es **menor a 84%, la probabilidad de mejora es baja (35% de mejora)**.
@@ -2094,42 +2013,6 @@ En conclusión, **estudiar más de 20 horas a la semana aumenta significativamen
 
 
 ```{r}
-=======
-* Si un estudiante ya tiene una calificación alta (High_Score = 1), no se espera una mejora significativa. Es decir, los estudiantes con alto rendimiento tienen menos margen de mejora.
-
-* La asistencia a clases es un factor fundamental para mejorar el rendimiento académico. Si la asistencia (Attendance) es menor a 84%, la probabilidad de mejora es baja (35% de mejora).
-Si la asistencia es mayor o igual a 84%, se consideran otros factores adicionales que pueden influir en la mejora.
-
-* Si Attendance >= 84%, la distancia al colegio (Distance_from_Home) afecta la mejora:
-
-    * Si un estudiante vive a más de 3 km, la probabilidad de mejora es 33%.
-    * Si un estudiante vive a menos de 3 km, se evalúan otros factores como las horas de estudio.
-En conclusión, los estudiantes que viven más lejos tienen menos probabilidad de mejorar, posiblemente debido a tiempos de traslado prolongados y fatiga.
-Si un estudiante estudia menos de 20 horas semanales, la tutoría (Tutoring_Sessions) se convierte en un factor relevante:
-
-* Si Tutoring_Sessions < 0.38, la probabilidad de mejorar es 41%.
-Si Tutoring_Sessions >= 0.38, la probabilidad de mejora aumenta a 54%.
-
-*Si un estudiante estudia más de 20 horas semanales, la probabilidad de mejorar es 57%. Sin embargo, en este caso, el nivel de involucramiento parental (Parental_Involvement) comienza a ser un factor clave:
-
-* Si Parental_Involvement < 3, la asistencia del estudiante se vuelve un elemento determinante:
-    * Si Attendance < 97%, la probabilidad de mejora es 13%.
-    * Si Attendance >= 97%, la probabilidad de mejora aumenta a 33%.
-* Si Parental_Involvement >= 3, la probabilidad de mejora es 67%.
-En conclusión, estudiar más de 20 horas a la semana aumenta significativamente la probabilidad de mejora. Para los estudiantes con menos horas de estudio, recibir tutorías ayuda a mejorar su rendimiento. Además, un alto nivel de involucramiento parental y una asistencia superior al 97% pueden compensar la falta de apoyo familiar.
-
-
-
-
-```{r}
-# Cargar librerías necesarias
-library(ggplot2)
-library(gganimate)
-library(gifski)
-library(rpart)
-library(dplyr)
-
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 # Dividir datos en entrenamiento y prueba
 set.seed(42)
 trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
@@ -2200,14 +2083,6 @@ anim_save("decision_tree_animation_smooth.gif")
 
 ```
 ```{r}
-<<<<<<< HEAD
-=======
-# Cargar librerías necesarias
-library(plotly)
-library(rpart)
-library(dplyr)
-
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
 # Dividir datos en entrenamiento y prueba
 set.seed(42)
 trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
@@ -2246,8 +2121,3 @@ interactive_plot
 
 ```
 
-<<<<<<< HEAD
-
-#### Conclusiones
-=======
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
