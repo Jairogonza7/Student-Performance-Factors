@@ -17,13 +17,21 @@ author: "Claudia Teresa Heredia Ceballos"
 
 ### Importancia local/nacional y en el contexto actual
 
+```{r}
+library(magrittr)
+library(dplyr)
+```
+
 ## Descripción del dataset
 
 Para la resolución de esta pregunta se partirá de los datos preprocesados en 'global.rmd'.
 
 ```{r}
+
 df_cleaned <- read.csv("data/df_cleaned.csv")
-df_cleaned
+df_cleaned_c <-  df_cleaned %>%
+  select(-Previous_Scores_Category)
+df_cleaned_c
 ```
 
 SOLUCIÓN 1: PREDICCIÓN DE EXAM_SCORE MEDIANTE GENERACIÓN DE DATOS SINTÉTICOS
@@ -35,7 +43,7 @@ SOLUCIÓN 1: PREDICCIÓN DE EXAM_SCORE MEDIANTE GENERACIÓN DE DATOS SINTÉTICOS
 library(ggplot2)
 
 # Histograma de exam_score
-ggplot(df_cleaned, aes(x = Exam_Score)) +
+ggplot(df_cleaned_c, aes(x = Exam_Score)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black") +
   theme_minimal() +
   labs(title = "Distribución de 'Exam_Score'", x = "Exam Score", y = "Frecuencia")
@@ -44,10 +52,10 @@ ggplot(df_cleaned, aes(x = Exam_Score)) +
 
 ```{r}
 # Calcular estadísticas descriptivas
-summary(df_cleaned$Exam_Score)
+summary(df_cleaned_c$Exam_Score)
 
 # Calcular desviación estándar
-sd_exam <- sd(df_cleaned$Exam_Score)
+sd_exam <- sd(df_cleaned_c$Exam_Score)
 cat("Desviación estándar de exam_score:", sd_exam)
 
 ```
@@ -55,69 +63,58 @@ cat("Desviación estándar de exam_score:", sd_exam)
 #### Generación de datos sintéticos para 'exam_score'
 
 ```{r}
-# Calcular media y desviación estándar originales
-media_exam <- mean(df_cleaned$Exam_Score)
-sd_exam <- sd(df_cleaned$Exam_Score)
+set.seed(123)
 
-# Aumentar la desviación estándar para generar más variabilidad
-sd_exam_aumentada <- sd_exam * 5  # Puedes ajustar el factor según necesites
+# Aplicar K-Means para agrupar estudiantes similares
+num_clusters <- 4
+clusters <- kmeans(df_cleaned_c$Exam_Score, centers = num_clusters, nstart = 10)
+df_cleaned_c$Cluster <- clusters$cluster
 
-# Generar datos sintéticos
-set.seed(123)  # Para reproducibilidad
-n_sintetico <- nrow(df_cleaned)
-exam_score_sintetico <- rnorm(n_sintetico, mean = media_exam, sd = sd_exam_aumentada)
-
-# Función para reflejar los valores fuera del rango 0-100
-reflejar_valores <- function(x, min_val = 0, max_val = 100) {
-  rango <- max_val - min_val
-  x <- (x - min_val) %% (2 * rango)
-  x <- ifelse(x > rango, 2 * rango - x, x) + min_val
-  return(x)
+# Interpolación y generación de nuevos datos
+expandir_cluster <- function(df_cluster) {
+  n <- nrow(df_cluster)
+  if (n < 2) return(df_cluster)  # Evitar problemas en clusters pequeños
+  
+  # Generar nuevos valores interpolados
+  nuevos_puntos <- seq(min(df_cluster$Exam_Score), max(df_cluster$Exam_Score), length.out = n * 2)
+  nuevos_puntos <- sample(nuevos_puntos, size = n, replace = TRUE)  # Aleatorizar la selección
+  df_cluster$Exam_Score <- nuevos_puntos
+  return(df_cluster)
 }
 
-# Aplicar la función a exam_score_sintetico
-exam_score_sintetico_reflejado <- reflejar_valores(exam_score_sintetico)
+# Aplicar la expansión en cada cluster
+df_sintetico <- df_cleaned_c %>% group_by(Cluster) %>% group_modify(~ expandir_cluster(.x)) %>% ungroup()
 
+# Añadir ruido proporcional a la dispersión de cada cluster
+df_sintetico <- df_sintetico %>% mutate(
+  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd_exam * 0.5)
+)
 
-
+# Limitar valores a 55-100
+df_sintetico$Exam_Score <- pmax(pmin(df_sintetico$Exam_Score, 100), 55)
 
 # Verificar la nueva distribución
-summary(exam_score_sintetico)
-sd_exam_sintetico <- sd(exam_score_sintetico)
+summary(df_sintetico$Exam_Score)
+sd_exam_sintetico <- sd(df_sintetico$Exam_Score)
 cat("Desviación estándar de exam_score sintético:", sd_exam_sintetico)
-
-# Definir parámetros de la distribución Beta
-a <- 2  # Puedes ajustar estos valores
-b <- 5
-
-
-
 ```
 
+
+
 ```{r}
-# Crear un dataframe para los datos sintéticos
-df_sintetico <- df_cleaned
-df_sintetico$Exam_Score <- exam_score_sintetico
 
 # Combinar los dataframes
-df_combined <- rbind(df_cleaned, df_sintetico)
+df_combined <- rbind(df_cleaned_c
+                     , df_sintetico)
 
 # Verificar el nuevo dataframe
 dim(df_combined)  # Debería tener el doble de filas que el original
 
 ```
 
-```{r}
-df_combined
-```
+
 
 ```{r}
-# Crear dataframe para los datos sintéticos
-df_sintetico <- df_cleaned
-df_sintetico$Exam_Score <- exam_score_sintetico
-
-# Combinar dataframes
-df_combined <- rbind(df_cleaned, df_sintetico)
 
 # Generar histograma
 ggplot(df_combined, aes(x = Exam_Score)) +
@@ -127,32 +124,8 @@ ggplot(df_combined, aes(x = Exam_Score)) +
 
 ```
 
-```{r}
-# Limitar los valores al rango 0-100
-exam_score_sintetico <- pmax(pmin(exam_score_sintetico, 100), 0)
 
-# Verificar la nueva distribución
-summary(exam_score_sintetico)
-sd_exam_sintetico <- sd(exam_score_sintetico)
-cat("Desviación estándar ajustada de exam_score sintético:", sd_exam_sintetico, "\n")
 
-```
-
-```{r}
-# Crear dataframe para los datos sintéticos ajustados
-df_sintetico <- df_cleaned
-df_sintetico$Exam_Score <- exam_score_sintetico
-
-# Combinar dataframes
-df_combined <- rbind(df_cleaned, df_sintetico)
-
-# Generar histograma
-ggplot(df_combined, aes(x = Exam_Score)) +
-  geom_histogram(binwidth = 5, fill = "purple", color = "black") +
-  theme_minimal() +
-  labs(title = "Distribución de 'exam_score' Combinado Ajustado", x = "Exam Score", y = "Frecuencia")
-
-```
 
 #### Feature Engineering
 
@@ -164,12 +137,14 @@ colnames(df_combined)
 
 ```{r}
 # Crear nuevas variables en df_combined
-df_combined$study_sleep_ratio <- df_combined$Hours_Studied / (df_combined$Sleep_Hours + 1)  # Evitar división por cero
-df_combined$motivated_study <- df_combined$Hours_Studied * df_combined$Motivation_Level
-df_combined$parent_peer_influence <- df_combined$Parental_Involvement * df_combined$Peer_Influence
+df_combined <- df_cleaned_c %>% mutate(
+  study_sleep_ratio = scale(Hours_Studied / (Sleep_Hours + 1)),  # Normalización
+  motivated_study = scale(Hours_Studied * Motivation_Level),
+  parent_peer_influence = scale(Parental_Involvement * Peer_Influence)
+)
 
 # Verificar las nuevas variables
-head(df_combined)
+summary(df_combined)
 ```
 
 #### Modelo
@@ -193,7 +168,7 @@ Division en entrenamiento y prueba:
 
 ```{r}
 # Cargar la librería necesaria
-install.packages("lattice")
+#install.packages("lattice")
 
 library(caret)
 library(lattice)
@@ -215,9 +190,9 @@ cat("Dimensiones del conjunto de prueba:", dim(test_data), "\n")
 
 ```{r}
 # Instalar las librerías si aún no las tienes
-install.packages("randomForest")
-install.packages("caret")
-install.packages("ggplot2")
+#install.packages("randomForest")
+#install.packages("caret")
+#install.packages("ggplot2")
 
 # Cargar las librerías
 library(randomForest)
@@ -229,10 +204,9 @@ library(ggplot2)
 Datos sin escalar:
 
 ```{r}
-# Si decides usar los datos originales sin escalar
-train_data_rf <- train_data
-test_data_rf <- test_data
-
+# Optimización de hiperparámetros con tuneGrid
+rf_grid <- expand.grid(mtry = seq(2, length(predictor_variables), by = 2))
+rf_control <- trainControl(method = "cv", number = 5, search = "grid")
 ```
 
 
@@ -249,13 +223,13 @@ control <- trainControl(method = "cv", number = 5)  # Validación cruzada de 5 p
 entrenamiento RF
 
 ```{r}
-# Entrenar el modelo Random Forest
-set.seed(123)  # Para reproducibilidad
-modelo_rf <- caret::train(
-  form = modelo_formula,
-  data = train_data_rf,
+# Entrenar el modelo
+set.seed(123)
+rf_model <- train(
+  Exam_Score ~ ., data = train_data,
   method = "rf",
-  trControl = control,
+  tuneGrid = rf_grid,
+  trControl = rf_control,
   importance = TRUE
 )
 
@@ -263,68 +237,26 @@ modelo_rf <- caret::train(
 
 evaluacion
 ```{r}
-# Generar predicciones en el conjunto de prueba
-predicciones_rf <- predict(modelo_rf, newdata = test_data)
-
-# Calcular métricas de rendimiento
-mae_rf <- MAE(predicciones_rf, test_data[[target_variable]])
-rmse_rf <- RMSE(predicciones_rf, test_data[[target_variable]])
-
-# Calcular R²
-sst <- sum((test_data[[target_variable]] - mean(test_data[[target_variable]]))^2)
-sse <- sum((test_data[[target_variable]] - predicciones_rf)^2)
-r2_rf <- 1 - (sse / sst)
-
-cat("Error Absoluto Medio (MAE):", mae_rf, "\n")
-cat("Raíz del Error Cuadrático Medio (RMSE):", rmse_rf, "\n")
-cat("Coeficiente de Determinación (R²):", r2_rf, "\n")
-
-```
-Predicciones vs Valores Reales
-```{r}
-# Crear un dataframe con los resultados
-resultados_rf <- data.frame(
-  Real = test_data[[target_variable]],
-  Predicho = predicciones_rf
-)
-
-# Gráfico de Predicciones vs Valores Reales
-ggplot(resultados_rf, aes(x = Real, y = Predicho)) +
-  geom_point(color = 'darkgreen', alpha = 0.6) +
-  geom_abline(intercept = 0, slope = 1, color = 'red', linetype = "dashed") +
-  theme_minimal() +
-  labs(title = "Random Forest: Comparación entre Valores Reales y Predicciones",
-       x = "Valores Reales",
-       y = "Predicciones del Modelo")
+# Evaluación del modelo
+rf_pred <- predict(rf_model, newdata = test_data)
+r2 <- cor(test_data$Exam_Score, rf_pred)^2
+cat("R^2 del modelo Random Forest:", r2, "\n")
 
 ```
 
 
-Distribución del Error Absoluto
 
-```{r}
-# Calcular el error absoluto
-resultados_rf$Error_Absoluto <- abs(resultados_rf$Real - resultados_rf$Predicho)
 
-# Histograma del Error Absoluto
-ggplot(resultados_rf, aes(x = Error_Absoluto)) +
-  geom_histogram(binwidth = 2, fill = 'skyblue', color = 'black', alpha = 0.7) +
-  theme_minimal() +
-  labs(title = "Random Forest: Distribución del Error Absoluto",
-       x = "Error Absoluto",
-       y = "Frecuencia")
-
-```
 
 
 importancia de variables:
 
 ```{r}
-# Extraer la importancia de las variables
-importancia <- varImp(modelo_rf, scale = FALSE)
+
 
 # Visualizar la importancia
-plot(importancia, main = "Importancia de las Variables en el Modelo Random Forest")
+varImpPlot(rf_model$finalModel, main = "Importancia de las Variables en el Modelo Random Forest")
+
 
 ```
 
