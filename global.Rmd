@@ -837,14 +837,13 @@ convert_to_one_hot <- function(df, column_names) {
 
 En cuanto a las calificaciones de los estudiantes, vamos a añadir una columna que clasifique las `Previous_Scores` de los estudiantes en diferentes categorías, de acuerdo con los rangos de puntuación establecidos en el sistema español:
 
-- **Aprobado**: Para las calificaciones entre 5.0 y 6.9.
+-   **Aprobado**: Para las calificaciones entre 5.0 y 6.9.
 
-- **Bien**: Para las calificaciones entre 7.0 y 7.9.
+-   **Bien**: Para las calificaciones entre 7.0 y 7.9.
 
-- **Notable**: Para las calificaciones entre 8.0 y 8.9.
+-   **Notable**: Para las calificaciones entre 8.0 y 8.9.
 
--**Sobresaliente**: Para las calificaciones superiores a 9.0.
-
+\-**Sobresaliente**: Para las calificaciones superiores a 9.0.
 
 ```{r}
 categorize_previous_scores <- function(df) {
@@ -914,11 +913,9 @@ clean_and_filter_data <- function(data) {
 
 ```
 
-
 ```{r}
 df_cleaned <- clean_and_filter_data(data)
 ```
-
 
 Vamos a guardar df_cleaned en la carpeta 'data' para poder hacer uso del dataset preprocesado en las preguntas individuales:
 
@@ -981,8 +978,6 @@ if (!file.exists(file_path)) {
 }
 ```
 
-
-
 ## Visualización de los datos
 
 En este apartado, exploraremos la distribución y relaciones entre las variables del conjunto de datos mediante diferentes representaciones gráficas. A través de histogramas, gráficos de dispersión y diagramas de barras, podremos identificar patrones, tendencias y posibles valores atípicos que nos ayuden a comprender mejor la información disponible.
@@ -992,7 +987,6 @@ En este apartado, exploraremos la distribución y relaciones entre las variables
 Para analizar la distribución de las variables numéricas relacionadas con el tiempo, generaremos histogramas que nos permitirán visualizar cómo se distribuyen sus valores.
 
 A continuación, se presentan los histogramas de las principales variables horarias para evaluar su comportamiento en el conjunto de datos.
-
 
 ```{r}
 create_hour_histogram <- function(df, variable, fill = "cornflowerblue") {
@@ -1016,8 +1010,8 @@ create_hour_histogram(data, "Sleep_Hours")
 create_hour_histogram(data, "Tutoring_Sessions")
 create_hour_histogram(data, "Physical_Activity")
 ```
-Respecto a las horas de sueño (`Sleep_Hours`), se observa que sigue una distribución aproximadamente normal, con la mayoría de los estudiantes durmiendo alrededor de 7 horas. En cuanto a las sesiones de tutoría, la mayoría de los estudiantes asiste a 1 o 2 sesiones, siendo poco común superar las 3 sesiones, y muchos estudiantes no asisten a ninguna. En relación con las horas de actividad física semanal, la mayoría dedica unas 3 horas a la semana al ejercicio, aunque también se observa una variabilidad en torno a las 2 y 4 horas. Es importante destacar que una pequeña proporción de estudiantes no realiza ninguna actividad física semanalmente
 
+Respecto a las horas de sueño (`Sleep_Hours`), se observa que sigue una distribución aproximadamente normal, con la mayoría de los estudiantes durmiendo alrededor de 7 horas. En cuanto a las sesiones de tutoría, la mayoría de los estudiantes asiste a 1 o 2 sesiones, siendo poco común superar las 3 sesiones, y muchos estudiantes no asisten a ninguna. En relación con las horas de actividad física semanal, la mayoría dedica unas 3 horas a la semana al ejercicio, aunque también se observa una variabilidad en torno a las 2 y 4 horas. Es importante destacar que una pequeña proporción de estudiantes no realiza ninguna actividad física semanalmente
 
 ### Distribución de calificaciones
 
@@ -1046,11 +1040,11 @@ ggplot(category_counts, aes(x = "", y = n, fill = Previous_Scores_Category)) +
 
 En este apartado, vamos a visualizar la distribución de las variables categóricas dentro del conjunto de datos. El objetivo principal es observar cómo se distribuyen las categorías dentro de cada variable. Para ello, se utilizan **gráficos de barras (bar plots)** y se agrupan las variables categóricas en **tres categorías principales**, lo que facilita la contextualización y organización del análisis:
 
-- **Contexto familiar y socioeconómico**: Variables que reflejan el entorno familiar y el nivel socioeconómico de los estudiantes.
+-   **Contexto familiar y socioeconómico**: Variables que reflejan el entorno familiar y el nivel socioeconómico de los estudiantes.
 
-- **Acceso a recursos y actividades**: Variables que describen el acceso de los estudiantes a recursos educativos y su participación en actividades extracurriculares.
+-   **Acceso a recursos y actividades**: Variables que describen el acceso de los estudiantes a recursos educativos y su participación en actividades extracurriculares.
 
-- **Rendimiento y apoyo educativo**: Variables relacionadas con la motivación, el apoyo educativo y otros factores que pueden influir en el rendimiento de los estudiantes.
+-   **Rendimiento y apoyo educativo**: Variables relacionadas con la motivación, el apoyo educativo y otros factores que pueden influir en el rendimiento de los estudiantes.
 
 ```{r}
 barplot_chart_multiple <- function(df, var_names) {
@@ -1102,20 +1096,20 @@ performance_and_support <- c("Motivation_Level", "Peer_Influence", "Learning_Dis
 ```{r}
 barplot_chart_multiple(data,family_and_socioeconomic)
 ```
+
 Respecto al **contexto familiar y socioeconómico**, la mayoría de los estudiantes reportan una **involucración media** de los padres en su educación, seguida de una involucración alta. Los *ingresos familiares* están equilibrados entre **niveles medios y bajos**. En cuanto al *nivel educativo de los padres*, la mayoría tiene estudios de **High School**, seguido de College, con una pequeña proporción alcanzando el Postgrado. Finalmente, predominan las **escuelas públicas**, que tienen más del doble de estudiantes que las privadas.
 
 ```{r}
 barplot_chart_multiple(data,student_access)
 ```
+
 En cuanto al acceso a recursos, la mayoría de los estudiantes tiene un **acceso medio-alto a los recursos** educativos. **Prácticamente todos los estudiantes cuentan con acceso a internet** y, en su mayoría, viven a una distancia **cercana o moderada** de su escuela.
 
 ```{r}
 barplot_chart_multiple(data,performance_and_support)
 ```
 
-Por último, observando las variables relacionadas con el **rendimiento y apoyo educativo**, se aprecia que los estudiantes presentan una *distribución variada* en cuanto a su motivación, influencia de los compañeros y posibles discapacidades de aprendizaje. La motivación, en su mayoría, se encuentra en niveles medios, lo que sugiere que los estudiantes tienen un interés moderado en sus estudios. En cuanto a la influencia de los compañeros, la mayoría de los estudiantes reporta una influencia positiva o neutral, lo que puede indicar un entorno social favorable para el aprendizaje. Además, una pequeña fracción de los estudiantes presenta discapacidades de aprendizaje, lo que podría influir en su rendimiento académico y requerir un análisis más profundo.
-Además, cabe recalcar que hay una mayor proporción de estudiantes masculinos en comparación con las femeninas, lo que podría generar sesgos en estudios posteriores sobre la influencia del género. Finalmente, más estudiantes participan en actividades extracurriculares que aquellos que no lo hacen.
-
+Por último, observando las variables relacionadas con el **rendimiento y apoyo educativo**, se aprecia que los estudiantes presentan una *distribución variada* en cuanto a su motivación, influencia de los compañeros y posibles discapacidades de aprendizaje. La motivación, en su mayoría, se encuentra en niveles medios, lo que sugiere que los estudiantes tienen un interés moderado en sus estudios. En cuanto a la influencia de los compañeros, la mayoría de los estudiantes reporta una influencia positiva o neutral, lo que puede indicar un entorno social favorable para el aprendizaje. Además, una pequeña fracción de los estudiantes presenta discapacidades de aprendizaje, lo que podría influir en su rendimiento académico y requerir un análisis más profundo. Además, cabe recalcar que hay una mayor proporción de estudiantes masculinos en comparación con las femeninas, lo que podría generar sesgos en estudios posteriores sobre la influencia del género. Finalmente, más estudiantes participan en actividades extracurriculares que aquellos que no lo hacen.
 
 ### Análisis del Promedio de Calificaciones en Función de Variables Categóricas
 
@@ -1148,6 +1142,7 @@ categoric_numeric_boxplot(data, "Extracurricular_Activities", "Previous_Scores")
 categoric_numeric_boxplot(data, "School_Type", "Previous_Scores")
 categoric_numeric_boxplot(data, "Gender", "Previous_Scores")
 ```
+
 Los resultados obtenidos son las bastantes curiosos ya que los promedios de las calificaciones (`Previous_Scores`) son **prácticamente idénticos en todos los casos**, independientemente de las características categóricas como la participación de los padres, el acceso a recursos, el nivel de motivación, el tipo de escuela y el género. Esta uniformidad es sorprendente, ya que se esperaba que variables como la participación parental, el acceso a recursos o el tipo de escuela tuvieran algún tipo de impacto en las calificaciones.
 
 A continuación, hacemos el mismo proceso pero para la calificación final de los estudiantes (`Exam_Score`):
@@ -1161,28 +1156,25 @@ categoric_numeric_boxplot(data, "School_Type", "Exam_Score")
 categoric_numeric_boxplot(data, "Gender", "Exam_Score")
 ```
 
-Existen varias explicaciones posibles para esta observación. Una posibilidad es que el conjunto de datos esté demasiado equilibrado (es decir es un **toy dataset**), de modo que las diferencias entre las categorías sean mínimas o se compensen entre sí. Otra explicación podría ser que el impacto de estas variables sobre las calificaciones **no sea tan directo o significativo como se pensaba inicialmente**. 
-Tal vez factores más complejos o interactivos, como el tipo de estrategias de estudio, o incluso el contexto social del estudiante, tengan un papel más relevante en el rendimiento académico. Además, es posible que la variable Previous_Scores no esté capturando toda la variabilidad en el rendimiento académico, ya que hay otros factores que pueden influir en el desempeño de los estudiantes que no se están considerando en este análisis.
-
+Existen varias explicaciones posibles para esta observación. Una posibilidad es que el conjunto de datos esté demasiado equilibrado (es decir es un **toy dataset**), de modo que las diferencias entre las categorías sean mínimas o se compensen entre sí. Otra explicación podría ser que el impacto de estas variables sobre las calificaciones **no sea tan directo o significativo como se pensaba inicialmente**. Tal vez factores más complejos o interactivos, como el tipo de estrategias de estudio, o incluso el contexto social del estudiante, tengan un papel más relevante en el rendimiento académico. Además, es posible que la variable Previous_Scores no esté capturando toda la variabilidad en el rendimiento académico, ya que hay otros factores que pueden influir en el desempeño de los estudiantes que no se están considerando en este análisis.
 
 ### Relación de variables respecto al Género
 
 Respecto a la primera pregunta planteada en este estudio respecto a si se pueden agrupar a los estudiantes en una clase según sus características una de las primeras cosas que se nos pueden ocurrir ya que, en algunos colegios es una práctica común, es dividir las clases por género. Este enfoque plantea la pregunta de si las diferencias de género podrían influir en el desempeño académico o en otras características importantes de los estudiantes, lo que justificaría esta práctica.
 
-Para estudiar esto más a fondo, vamos a observar las distribuciones de las variables clave como el tiempo dedicado al estudio, la participación en actividades extracurriculares, la motivación, y las calificaciones previas, agrupadas por el género del estudiante. 
-Esto nos ayudará respecto a la primera pregunta de nuestro estudio, es decir, nos permitirá determinar si es posible segmentar a los estudiantes de manera más efectiva, tomando en cuenta el género como una variable que podría influir en su desempeño. 
-Esto puede ser útil ya que se encuentran diferencias notables entre los géneros, podría ser útil dividir las clases por género para que se ajusten a las necesidades y características de cada grupo.
+Para estudiar esto más a fondo, vamos a observar las distribuciones de las variables clave como el tiempo dedicado al estudio, la participación en actividades extracurriculares, la motivación, y las calificaciones previas, agrupadas por el género del estudiante. Esto nos ayudará respecto a la primera pregunta de nuestro estudio, es decir, nos permitirá determinar si es posible segmentar a los estudiantes de manera más efectiva, tomando en cuenta el género como una variable que podría influir en su desempeño. Esto puede ser útil ya que se encuentran diferencias notables entre los géneros, podría ser útil dividir las clases por género para que se ajusten a las necesidades y características de cada grupo.
 
-Antes que nada, recalcar que hemos observado anteriormente que los hombres representan un 57.8% del total de alumnos y las mujeres un 42.2% por lo que vamos a utilizar técnicas de ponderación para equilibrar las distribuciones de los géneros y asegurarnos de que el análisis no se vea sesgado por la mayor representación de un género sobre otro. Esto nos ayudará a identificar si, a pesar de las diferencias de representación entre hombres y mujeres, las tendencias de las variables clave, como las horas de estudio, la motivación y las calificaciones previas, se mantienen consistentes o si existen patrones diferenciados según el género. 
+Antes que nada, recalcar que hemos observado anteriormente que los hombres representan un 57.8% del total de alumnos y las mujeres un 42.2% por lo que vamos a utilizar técnicas de ponderación para equilibrar las distribuciones de los géneros y asegurarnos de que el análisis no se vea sesgado por la mayor representación de un género sobre otro. Esto nos ayudará a identificar si, a pesar de las diferencias de representación entre hombres y mujeres, las tendencias de las variables clave, como las horas de estudio, la motivación y las calificaciones previas, se mantienen consistentes o si existen patrones diferenciados según el género.
 
 Creamos una columna de ponderación llamada `weight_gender` que contiene los **pesos inversos** para los géneros. Como las mujeres representan el 42.2%, podemos asignarles un peso mayor, digamos 1.5 veces su valor real, y los hombres, con el 57.8%, tendrían un peso más bajo.
 
 El peso para cada género lo calculamos de la siguiente manera:
 
-- **Peso para mujeres**: 57.8 / 42.2 ≈ 1.37
-- **Peso para hombres**: 42.2 / 57.8 ≈ 0.73
+-   **Peso para mujeres**: 57.8 / 42.2 ≈ 1.37
+-   **Peso para hombres**: 42.2 / 57.8 ≈ 0.73
 
-Una vez hecho esto, creamos gráficos de barras con las variables ponderadas por género. 
+Una vez hecho esto, creamos gráficos de barras con las variables ponderadas por género.
+
 ```{r}
 data$gender_weight <- ifelse(data$Gender == "Female", 1.37, 0.73)
 
@@ -1217,7 +1209,6 @@ create_Relation_With_Gender_Chart(data, "Exam_Score")
 Si observamos las gráficas llegamos a que la conclusión que podemos obtener de este análisis, después de aplicar la ponderación para equilibrar la representación de hombres y mujeres, es que, a pesar de las diferencias en la proporción de género en el conjunto de datos, las mujeres tienden a tener un mayor rendimiento académico en varias áreas clave. Esto se refleja en su mayor número de horas de sueño, mayor dedicación al estudio y mayor participación en tutorías en comparación con los hombres. Además, las mujeres tienen calificaciones más altas, tanto en `Previous_Scores` como en `Exam_Score`.
 
 Estos resultados nos plantean el debate de si es conveniente separar o agrupar a los estudiantes por género, ya que la evidencia sugiere que las mujeres pueden tener ciertas ventajas en cuanto a hábitos de estudio. Sin embargo, vamos a tener en cuenta otros factores que podrían influir en el rendimiento académico, como el entorno socioeconómico, la motivación, y el acceso a recursos educativos.
-
 
 ### Distribución Proporcional de Variables Categóricas por Tipo de Escuela
 
@@ -1254,12 +1245,12 @@ stacked_barplot(data, "School_Type", "Distance_from_Home")
 stacked_barplot(data, "School_Type", "Peer_Influence")
 stacked_barplot(data, "School_Type", "Motivation_Level")
 ```
+
 Observamos que la proporción de todas las variables categóricas es **prácticamente idéntica** en ambos tipos de escuela, lo que sugiere que no existen diferencias sustanciales en la distribución de estas características entre las escuelas públicas y privadas. Esta falta de variación significativa podría indicar que factores como la participación de los padres, el nivel socioeconómico y la calidad docente **no están siendo influenciados de manera evidente por el tipo de institución educativa**.
 
 ### Análisis de la Asistencia en Función de Variables Categóricas
 
-Después de analizar la relación entre distintas variables categóricas y las calificaciones de los estudiantes, observamos que no parecen influir significativamente en el rendimiento académico. Ahora, nos enfocaremos en estudiar si ciertos factores pueden estar relacionados con la **asistencia a clases**(`attendance`). Específicamente, analizaremos variables como la distancia desde el hogar a la escuela, el acceso a recursos, el nivel de ingresos familiares, la motivación y la influencia de los compañeros. 
-Para ello, haremos uso de **boxplots** como hicimos anteriormente de modo que podremos visualizar si estas variables presentan variaciones significativas en la asistencia y detectar posibles tendencias o patrones.
+Después de analizar la relación entre distintas variables categóricas y las calificaciones de los estudiantes, observamos que no parecen influir significativamente en el rendimiento académico. Ahora, nos enfocaremos en estudiar si ciertos factores pueden estar relacionados con la **asistencia a clases**(`attendance`). Específicamente, analizaremos variables como la distancia desde el hogar a la escuela, el acceso a recursos, el nivel de ingresos familiares, la motivación y la influencia de los compañeros. Para ello, haremos uso de **boxplots** como hicimos anteriormente de modo que podremos visualizar si estas variables presentan variaciones significativas en la asistencia y detectar posibles tendencias o patrones.
 
 ```{r}
 categoric_numeric_boxplot(data, "Distance_from_Home", "Attendance")
@@ -1268,6 +1259,7 @@ categoric_numeric_boxplot(data, "Family_Income", "Attendance")
 categoric_numeric_boxplot(data, "Motivation_Level", "Attendance")
 categoric_numeric_boxplot(data, "Peer_Influence", "Attendance")
 ```
+
 Al igual que en el análisis de las calificaciones, observamos que las distintas variables categóricas no parecen tener un impacto significativo en el nivel de asistencia a clase. Sin embargo, si hay que destacar algún patrón, se percibe una ligera disminución en la asistencia entre los estudiantes que viven a una mayor distancia de la escuela (categoría "Far"), aunque la diferencia es mínima y no parece ser un factor determinante.
 
 ### Matriz de correlación
@@ -1287,11 +1279,12 @@ ggplot(data = matriz_melt, aes(Var1, Var2, fill = value)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Variables", y = "Variables", title = "Mapa de Calor de Correlación")
 ```
+
 Al observar los resultados obtenidos de los modelos de análisis, vemos que `Hours_Studied` y `Attendance` resaltan como las características más importantes en la predicción del rendimiento de los estudiantes, de acuerdo con las puntuaciones de importancia normalizadas que se asignan a estas variables. Esto significa que:
 
-- **Hours_Studied**: Los modelos asignan una alta importancia a la cantidad de horas que un estudiante dedica al estudio, sugiriendo que, a medida que los estudiantes invierten más tiempo en estudiar, esto tiene una relación significativa con su rendimiento académico. Es decir, estudiar más suele estar vinculado a un mejor desempeño.
+-   **Hours_Studied**: Los modelos asignan una alta importancia a la cantidad de horas que un estudiante dedica al estudio, sugiriendo que, a medida que los estudiantes invierten más tiempo en estudiar, esto tiene una relación significativa con su rendimiento académico. Es decir, estudiar más suele estar vinculado a un mejor desempeño.
 
-- **Attendance**: Una mayor asistencia a las clases indica que el estudiante está más comprometido con su aprendizaje, lo cual suele reflejarse en mejores resultados académicos.
+-   **Attendance**: Una mayor asistencia a las clases indica que el estudiante está más comprometido con su aprendizaje, lo cual suele reflejarse en mejores resultados académicos.
 
 ## Técnicas de resolución
 
@@ -1306,7 +1299,6 @@ Esta pregunta busca explorar la posibilidad de segmentar a los estudiantes en gr
 Aquí nos enfocamos en determinar una relación predictiva entre el tiempo dedicado al estudio y las calificaciones obtenidas. Para ello, aplicaremos modelos de regresión que nos permitan estimar el número de horas de estudio necesarias para alcanzar un rendimiento académico sobresaliente.
 
 Por tanto, con el empleo de esta técnicas vamos a generar modelos predictivos y descriptivos que aporten respuestas concretas y basadas en datos a las preguntas del estudio.
-
 
 ### Pregunta 1. ¿Se pueden agrupar a los estudiantes en una clase según sus características?
 
@@ -1324,8 +1316,7 @@ En primer lugar, decidimos una estrategia a adoptar para agrupar a los alumnos. 
 
 -   **General**: Todas las variables. ¿Que grupos conforman estos datos?
 
-**NOTA**: En relación con la variable `School_Type` (tipo de escuela, ya sea pública o privada), hemos observado en análisis previos que el tipo de colegio no muestra una relación significativa con el rendimiento académico de los estudiantes. Esto sugiere que, desde la perspectiva académica, la distinción entre escuelas públicas y privadas no influye de manera notable en las calificaciones o el desempeño escolar de los estudiantes.
-Además, desde el punto de vista de la pregunta central de este análisis, queremos agrupar a los estudiantes en clases según sus características para poder asignarlos a diferentes grupos que favorezcan su aprendizaje. Este proceso de agrupamiento se basa principalmente en características individuales de los estudiantes (como el número de horas de estudio, la asistencia a clases, la motivación, etc.), más que en el tipo de escuela al que asisten. Por lo tanto, no tiene sentido dividir a los estudiantes según su tipo de escuela (pública o privada) en este contexto, ya que el objetivo es organizar a los estudiantes en grupos que favorezcan su aprendizaje de manera independiente al tipo de colegio al que pertenecen.
+**NOTA**: En relación con la variable `School_Type` (tipo de escuela, ya sea pública o privada), hemos observado en análisis previos que el tipo de colegio no muestra una relación significativa con el rendimiento académico de los estudiantes. Esto sugiere que, desde la perspectiva académica, la distinción entre escuelas públicas y privadas no influye de manera notable en las calificaciones o el desempeño escolar de los estudiantes. Además, desde el punto de vista de la pregunta central de este análisis, queremos agrupar a los estudiantes en clases según sus características para poder asignarlos a diferentes grupos que favorezcan su aprendizaje. Este proceso de agrupamiento se basa principalmente en características individuales de los estudiantes (como el número de horas de estudio, la asistencia a clases, la motivación, etc.), más que en el tipo de escuela al que asisten. Por lo tanto, no tiene sentido dividir a los estudiantes según su tipo de escuela (pública o privada) en este contexto, ya que el objetivo es organizar a los estudiantes en grupos que favorezcan su aprendizaje de manera independiente al tipo de colegio al que pertenecen.
 
 ```{r}
 academic_columns <- c("Hours_Studied","Motivation_Level","Sleep_Hours", "Attendance", "Exam_Score", "Previous_Scores", "Previous_Scores_Category")
@@ -1583,7 +1574,6 @@ El análisis realizado revela que la participación en **actividades extracurric
 compare_k(data_for_cluster_general)
 ```
 
-
 ```{r}
 optimal_clusters_general <- find_optimal_clusters(data_for_cluster_general)
 ```
@@ -1755,24 +1745,25 @@ rmse <- sqrt(mean(residuos^2))
 print(paste("RMSE: ", rmse))
 ```
 
-
-### Análisis del Desempeño Académico y Factores que Influyen en la Mejora del Estudiante 
+### Análisis del Desempeño Académico y Factores que Influyen en la Mejora del Estudiante
 
 #### Introducción
 
 ¿Cuáles son los factores clave que determinan si un estudiante mejorará su rendimiento académico?
 
-El objetivo de este estudio es identificar los factores que influyen en la mejora del rendimiento académico de los estudiantes.
-Para lograrlo, se han utilizado técnicas de aprendizaje automático que permiten analizar grandes volúmenes de datos y extraer patrones que pueden ser utilizados para la toma de decisiones en el ámbito educativo.
+El objetivo de este estudio es identificar los factores que influyen en la mejora del rendimiento académico de los estudiantes. Para lograrlo, se han utilizado técnicas de aprendizaje automático que permiten analizar grandes volúmenes de datos y extraer patrones que pueden ser utilizados para la toma de decisiones en el ámbito educativo.
 
 Dado que las variables del conjunto de datos no presentaban una correlación lineal significativa entre sí, se descartaron métodos estadísticos tradicionales y se optó por modelos basados en árboles de decisión, que permiten capturar relaciones complejas entre las variables y generar reglas interpretables.
-
 
 #### Preparación y Exploración de Datos
 
 Se parte de un conjunto de datos estructurado con múltiples variables relacionadas con el desempeño académico de los estudiantes, incluyendo horas de estudio, asistencia, nivel de motivación, acceso a recursos, entre otros. Concretamente para responder a esta pregunta se usará el conjunto de datos ya preprocesado **"df_cleaned"**.
 
 Para entender mejor la distribución de las calificaciones, se generaron histogramas de Exam_Score y Previous_Scores:
+
+#### Visualización de la Distribución de Calificaciones
+
+Objetivo: Entender la distribución de las calificaciones actuales (Exam_Score) y previas (Previous_Scores) para determinar si son adecuadas como variables objetivo.
 
 ```{r}
 # Distribución de Exam_Score
@@ -1787,337 +1778,402 @@ ggplot(df_cleaned, aes(x = Previous_Scores)) +
 
 ```
 
-`Exam_Score` tiene **poca variabilidad**, con la mayoría de los estudiantes en el rango de **60 a 75 puntos**.
-`Previous_Scores` tiene una distribución más uniforme, lo que sugiere que podría ser una mejor variable predictora. Debido a la baja variabilidad en `Exam_Score`, decidimos intentar predecir **High_Score** en lugar de Exam_Score directamente.
+`Exam_Score` tiene **poca variabilidad**, con la mayoría de los estudiantes en el rango de **60 a 75 puntos**. `Previous_Scores` tiene una distribución más uniforme, lo que sugiere que podría ser una mejor variable predictora. Debido a la baja variabilidad en Exam_Score, utilizarlo directamente como variable objetivo podría no ser eficaz. Por ello, decidimos crear una variable categórica que represente mejor el rendimiento académico.
 
-El conjunto de datos no contenía una variable explícita para clasificar el rendimiento de los estudiantes.
-Para abordar este problema, se creó la variable `High_Score`, que **clasifica a los estudiantes en alto rendimiento y bajo rendimiento con base en sus calificaciones previamente obtenidas (Previous_Score)**.
 
+
+### Modelo Predictivo
+
+El objetivo del modelo será predecir según distintos factores, si el alumno mejorará su rendimiento o no.
+
+Para ello, se creará una nueva variable 'Improved', que tomará valor 1 si el alumno ha mejorado la calificación en 'Exam_Score' respecto a la 'Previous_Score'.
 
 ```{r}
-# Crear la variable High_Score (1 si el Exam_Score >= 80, 0 si es menor)
-df_cleaned$High_Score <- ifelse(df_cleaned$Previous_Scores >= 80, 1, 0)
+# Crear la variable Improved (1 si Exam_Score > Previous_Scores, 0 si no)
+df_cleaned$Improved <- ifelse(df_cleaned$Exam_Score > df_cleaned$Previous_Scores, 1, 0)
 
 # Ver distribución
-table(df_cleaned$High_Score)
+table(df_cleaned$Improved)
+
+prop.table(table(df_cleaned$Improved))
 ```
+Aproximadamente el 32.5% de los estudiantes mejoraron su calificación, mientras que el 67.5% no lo hicieron. 
 
-Se seleccionó un **umbral de calificación de un 8** para definir un "alto rendimiento" porque permite diferenciar a los estudiantes con desempeño notable del resto.
+Esta variable será nuestra variable objetivo para predecir la mejora en el rendimiento académico.
 
-Esta clasificación se utilizará en los modelos para predecir qué factores influyen en que un estudiante alcance un alto rendimiento.
+#### Preparación del Conjunto de Datos para el Modelo
 
-
-### Modelos Utilizados
-
-Para identificar los factores que más influyen en el rendimiento de los estudiantes, se probaron distintos modelos:
-
-**1. Regresión Logística**
-
-**2. Random Forest**
-
-**3. XGBoost**
-
-**4. Árbol de Decisión (Mejor Modelo)**
-
-
-##### 1. Regresión Logística
-La regresión logística se utilizó inicialmente para predecir High_Score en función de las demás variables.
+En este apartado se limpia el conjunto de datos eliminando variables redundantes y preparando los datos para el modelado.
 
 ```{r}
-# Entrenar modelo de Regresión Logística
-model <- glm(High_Score ~ ., data = df_cleaned %>% select(-Exam_Score), family = binomial)
+# Eliminar una de las variables dummies para evitar multicolinealidad
+# Eliminar variables dummies redundantes
+df_model <- df_cleaned %>%
+  select(-School_Type_Public, -Gender_Female, -Exam_Score, -Previous_Scores, -Previous_Scores_Category)
 
-# Hacer predicciones
-y_prob <- predict(model, newdata = df_cleaned, type = "response")
-y_pred <- ifelse(y_prob >= 0.5, 1, 0)
-
-# Evaluación
-accuracy <- mean(y_pred == df_cleaned$High_Score)
-print(paste("Accuracy:", accuracy))
+# Convertir 'Improved' a factor
+df_model$Improved <- as.factor(df_model$Improved)
 
 ```
-Precisión = 99.9%, lo cual es demasiado alto para ser realista.
-Se detectó sobreajuste, ya que Previous_Scores predecía High_Score casi perfectamente.
-Conclusión: No es un modelo útil para este análisis
 
-##### 2. Random Forest
+Eliminamos variables dummies redundantes para evitar multicolinealidad.
 
-Se probó Random Forest para capturar relaciones no lineales entre variables.
+Excluimos 'Exam_Score' y 'Previous_Scores' ya que 'Improved' es derivada de ellas.
 
+Convertimos 'Improved' a factor para su uso en modelos de clasificación.
+
+
+#### División del Conjunto de Datos
+
+
+Con 'createDataPartition' mantenemos la proporcion de las clases en 'trainData' y 'testData', evitando que alguna clase quede sobre o subrepresentada en el conjunto de prueba.
 ```{r}
-# Dividir datos en entrenamiento (70%) y prueba (30%)
 set.seed(42)
-trainIndex <- createDataPartition(df_cleaned$High_Score, p = 0.7, list = FALSE)
+trainIndex <- createDataPartition(df_model$Improved, p = 0.7, list = FALSE)
+trainData <- df_model[trainIndex, ]
+testData <- df_model[-trainIndex, ]
+
+# Verificar distribución de clases
+prop.table(table(trainData$Improved))
+prop.table(table(testData$Improved))
+
+```
+Como puede observarse la distribución de clases se mantiene consistente en ambos conjuntos, lo cual es importante para obtener un modelo representativo.
+
+Con ello aseguramos que 'testData' represente fielmente la realidad y así evaluar el modelo en datos reales y desbalanceados. 
+
+Para manejar el desbalance del entrenamiento, aplicamos submuestreo de la clase mayoritaria con 'downSample':
+
+```{r}
+# Submuestreo de la clase mayoritaria
+set.seed(42)
+trainData_balanced <- downSample(x = trainData %>% select(-Improved), y = trainData$Improved)
+
+# Verificar nueva distribución
+table(trainData_balanced$Class)
+
+```
+Al aplicar submuestreo de la clase mayoritaria (0 - no mejoró), se equilibran las clases en el conjunto de entrenamiento. Esto permitirá que el modelo aprenda de ambas clases por igual.
+
+#### Entrenamiento de Random Forest
+
+Configuramos el control de entrenamiento con validacion cruzada repetida:
+
+```{r}
+# Configurar control de entrenamiento
+control <- trainControl(method = "repeatedcv", number = 5, repeats = 3)
+
+```
+Utilizamos 5 particiones (folds) repetidas 3 veces para obtener una estimación más estable del rendimiento del modelo.
+
+Además de entrenar el modelo n = 500, calcularemos la importancia de variables.
+
+```{r}
+# Entrenar el modelo Random Forest
+set.seed(42)
+rf_model <- train(
+  Class ~ ., 
+  data = trainData_balanced,
+  method = "rf",
+  trControl = control,
+  importance = TRUE,
+  ntree = 500
+)
+
+```
+
+
+#### Evaluación
+
+```{r}
+# Realizar predicciones
+predictions <- predict(rf_model, newdata = testData)
+
+# Ver matriz de confusión
+conf_mat <- confusionMatrix(predictions, testData$Improved, positive = "1")
+
+# Mostrar resultados
+print(conf_mat)
+
+```
+
+* Accuracy (Precisión): El modelo tiene una precisión del 92%.
+
+* Sensitivity (Sensibilidad): El 95.97% de los estudiantes que mejoraron fueron correctamente identificados.
+
+* Specificity (Especificidad): El 90.09% de los estudiantes que no mejoraron fueron correctamente identificados.
+
+* Kappa: Valor de 0.8251, indicando un alto nivel de acuerdo más allá del azar.
+
+El modelo muestra un buen desempeño en términos de precisión y equilibrio entre sensibilidad y especificidad, lo cual es importante dado el desbalance original de clases.
+
+
+
+```{r}
+# Calcular probabilidades de predicción
+prob_predictions <- predict(rf_model, newdata = testData, type = "prob")
+
+# Calcular AUC
+library(pROC)
+roc_obj <- roc(testData$Improved, prob_predictions[, "1"])
+auc_value <- auc(roc_obj)
+print(paste("AUC:", auc_value))
+
+# Graficar la curva ROC
+plot.roc(roc_obj, main = "Curva ROC - Random Forest")
+
+```
+
+#### Importancia de Variables 
+
+Una vez validado el modelo, vamos a determinar cuales son las variables mas importantes que influyen en la predicción de la mejora del estudiante. 
+
+```{r}
+# Importancia de variables
+var_imp <- varImp(rf_model)
+plot(var_imp, top = 11, main = "Importancia de Variables")
+
+```
+
+
+
+
+
+
+#### Arbol de decision
+
+
+```{r}
+# Instalar paquetes si no están instalados
+if (!require("rpart")) install.packages("rpart", dependencies=TRUE)
+if (!require("rpart.plot")) install.packages("rpart.plot", dependencies=TRUE)
+if (!require("caret")) install.packages("caret", dependencies=TRUE)
+
+# Cargar las librerías necesarias
+library(rpart)
+library(rpart.plot)
+library(caret)
+
+```
+
+
+```{r}
+# Definir las variables más importantes según análisis previo
+important_vars <- c("Attendance", "Teacher_Quality", "Hours_Studied", 
+                    "Parental_Involvement", "Peer_Influence", 
+                    "Tutoring_Sessions", "Distance_from_Home", "Motivation_Level", 
+                    "Internet_Access", "Parental_Education_Level", "Extracurricular_Activities")
+
+```
+
+
+```{r}
+# Definir la variable objetivo y las variables predictoras
+X <- df_cleaned[, important_vars]
+y <- df_cleaned$Improved
+
+# Dividir en conjunto de entrenamiento (70%) y prueba (30%)
+set.seed(42)
+trainIndex <- createDataPartition(y, p = 0.7, list = FALSE)
 trainData <- df_cleaned[trainIndex, ]
 testData  <- df_cleaned[-trainIndex, ]
 
-# Entrenar el modelo Random Forest (corrigiendo parámetros)
-rf_model <- randomForest(factor(High_Score) ~ ., 
-                         data = trainData %>% select(-Exam_Score), 
-                         ntree = 200,  # Reducimos el número de árboles
-                         mtry = floor(sqrt(ncol(trainData) - 1)),  # Ajustamos número de variables por árbol
-                         importance = TRUE)
-
-# Hacer predicciones en el conjunto de prueba
-rf_pred <- predict(rf_model, newdata = testData, type = "class")
-
-# Evaluar precisión del modelo
-rf_accuracy <- mean(rf_pred == testData$High_Score)
-print(paste("Random Forest Accuracy:", rf_accuracy))
-
-# Matriz de confusión
-rf_conf_matrix <- table(Predicted = rf_pred, Actual = testData$High_Score)
-print("Random Forest Confusion Matrix:")
-print(rf_conf_matrix)
-
-# Importancia de las variables
-importance_df <- as.data.frame(importance(rf_model))
-importance_df$Variable <- rownames(importance_df)
-importance_df <- importance_df[order(-importance_df$MeanDecreaseGini), ]
-
-# Visualizar importancia de variables
-print("Variable Importance in Random Forest:")
-print(importance_df)
-
-# Visualización gráfica de importancia de variables
-ggplot(importance_df, aes(x = reorder(Variable, -MeanDecreaseGini), y = MeanDecreaseGini)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  coord_flip() +
-  labs(title = "Importancia de Variables en Random Forest", x = "Variables", y = "Importancia Gini")
-
-
-
 ```
-#### 3. XGBoost
+
+
 
 ```{r}
-# Preparar datos en formato de matriz para XGBoost
-train_matrix <- model.matrix(High_Score ~ . -1, data = trainData %>% select(-Exam_Score))
-test_matrix  <- model.matrix(High_Score ~ . -1, data = testData %>% select(-Exam_Score))
-
-# Convertir a formato DMatrix de XGBoost
-dtrain <- xgb.DMatrix(data = train_matrix, label = trainData$High_Score)
-dtest  <- xgb.DMatrix(data = test_matrix, label = testData$High_Score)
-
-# Definir hiperparámetros del modelo
-params <- list(
-  objective = "binary:logistic",  # Clasificación binaria
-  eval_metric = "error",  # Evaluar por tasa de error
-  eta = 0.1,  # Tasa de aprendizaje
-  max_depth = 6,  # Profundidad máxima del árbol
-  subsample = 0.8,  # Porcentaje de muestras usadas en cada iteración
-  colsample_bytree = 0.8  # Proporción de variables usadas en cada árbol
-)
-
-# Entrenar el modelo XGBoost
-set.seed(42)
-xgb_model <- xgb.train(params, dtrain, nrounds = 100, watchlist = list(train = dtrain, test = dtest), verbose = 0)
-
-# Hacer predicciones
-xgb_pred_prob <- predict(xgb_model, dtest)
-xgb_pred <- ifelse(xgb_pred_prob > 0.5, 1, 0)
-
-# Evaluar precisión del modelo
-xgb_accuracy <- mean(xgb_pred == testData$High_Score)
-print(paste("XGBoost Accuracy:", xgb_accuracy))
-
-# Matriz de confusión
-xgb_conf_matrix <- table(Predicted = xgb_pred, Actual = testData$High_Score)
-print("XGBoost Confusion Matrix:")
-print(xgb_conf_matrix)
-
-# Importancia de variables en XGBoost
-importance_matrix <- xgb.importance(model = xgb_model)
-print("Feature Importance in XGBoost:")
-print(importance_matrix)
+# Entrenar el Árbol de Decisión con hiperparámetros ajustados
+tree_model <- rpart(Improved ~ ., 
+                    data = trainData[, c(important_vars, "Improved")], 
+                    method = "class", 
+                    control = rpart.control(cp = 0.001, minsplit = 5, maxdepth = 8))
 
 ```
 
-#### 4. Árbol de Decisión
+
+
+```{r}
+# Hacer predicciones con los datos de prueba
+tree_pred <- predict(tree_model, newdata = testData, type = "class")
+
+```
+
+
+```{r}
+# Calcular precisión del modelo
+tree_accuracy <- mean(tree_pred == testData$Improved)
+
+# Crear matriz de confusión
+tree_conf_matrix <- table(Predicho = tree_pred, Real = testData$Improved)
+
+# Imprimir resultados
+print(paste("Precisión del Árbol Mejorado:", round(tree_accuracy * 100, 2), "%"))
+print("Matriz de Confusión:")
+print(tree_conf_matrix)
+
+```
+
+```{r}
+# Visualizar el Árbol de Decisión Optimizado con mejores ajustes
+rpart.plot(tree_model, 
+           type = 2,  # Mostrar etiquetas en nodos
+           extra = 104,  # Mostrar porcentaje de datos en cada nodo
+           box.palette = "RdYlGn",  # Mejores colores para diferenciar clases
+           tweak = 0.5,  # Ajustar tamaño del árbol
+           cex = 0.65,  # Reducir tamaño de fuente para evitar sobrecarga
+           fallen.leaves = TRUE,  # Mejor alineación de nodos terminales
+           main = "Árbol de Decisión Optimizado con Variables Clave")
+
+```
+
+```{r}
+print(tree_model)
+```
+
+```{r}
+# Función para extraer las reglas del árbol
+extract_rules <- function(tree_model) {
+  path <- path.rpart(tree_model, nodes = as.numeric(row.names(tree_model$frame)))
+  return(path)
+}
+
+# Aplicar la función y mostrar reglas
+rules <- extract_rules(tree_model)
+rules
+
+```
+
+* La asistencia (Attendance) es el factor más determinante en la mejora académica.
+
+    * Si la asistencia es menor al 79.5%, la probabilidad de mejora es del 26.96% (578/2144).
+    * Si la asistencia es mayor o igual al 79.5%, la probabilidad de mejora aumenta al 38.22% (887/2321).
+
+*El nivel de involucramiento parental (Parental_Involvement) tiene un impacto clave en los estudiantes con alta asistencia.
+
+    * Si el involucramiento parental es menor a 2.5, la probabilidad de mejora es del 35.59% (579/1627).
+    * Si el involucramiento parental es mayor o igual a 2.5, la probabilidad de mejora aumenta al 44.38% (308/694).
+
+* Los estudiantes con asistencia mayor a 86.5% y baja calidad docente (Teacher_Quality < 1.5) dependen del nivel educativo de sus padres (Parental_Education_Level).
+
+    * Si Parental_Education_Level < 1.5, la probabilidad de mejora es del 16.39% (10/61), pero aumenta al 40% (1/25) si el estudiante recibe al menos 1.5 sesiones de tutoría (Tutoring_Sessions ≥ 1.5).
+    * Si Parental_Education_Level ≥ 1.5, la probabilidad de mejora sube al 45.24% (19/42) cuando el estudiante estudia más de 26.5 horas semanales.
+
+
+* El impacto del nivel de motivación (Motivation_Level) y la influencia de compañeros (Peer_Influence).
+
+    * Si Motivation_Level < 1.5 y el estudiante vive a más de 2.5 km, la probabilidad de mejora es baja (4.17%).
+    * Si Motivation_Level ≥ 1.5 y el estudiante tiene alta influencia de compañeros (Peer_Influence ≥ 1.5), la probabilidad de mejora sube al 42.11% (244/566).
+    * Si Motivation_Level ≥ 1.5 y el estudiante estudia más de 29.5 horas, la probabilidad de mejora sube al 62.96% (17/27).
+
+* Las tutorías (Tutoring_Sessions) tienen un efecto significativo en los estudiantes con alta carga académica.
+
+    * Si Hours_Studied ≥ 29.5 y el estudiante recibe al menos 2.5 sesiones de tutoría, la probabilidad de mejora es del 100% (8/8).
+    * Si Hours_Studied ≥ 29.5, pero el estudiante recibe menos de 2.5 tutorías, la probabilidad de mejora varía entre 60% y 83.33%, dependiendo del nivel educativo de los padres.
+
+* La influencia de la distancia desde casa (Distance_from_Home) en la mejora del rendimiento.
+
+    * Si un estudiante vive a más de 2.5 km y su asistencia es menor a 83.5%, la probabilidad de mejora baja al 55.56% (5/9).
+    * Si un estudiante vive a menos de 2.5 km y tiene un Teacher_Quality ≥ 1.5, la probabilidad de mejora es mayor a 44.86%.
+
+* Las actividades extracurriculares (Extracurricular_Activities) juegan un rol crucial.
+
+    * Si el estudiante participa en actividades extracurriculares y tiene asistencia ≥ 94.5%, la probabilidad de mejora es 63.79% (37/58).
+    * Si no participa en actividades extracurriculares y su asistencia es < 94.5%, la probabilidad de mejora baja al 42.31%.
+
+* Los estudiantes con Attendance ≥ 99.5% y al menos 7.5 horas de estudio tienen una probabilidad de mejora del 100%.
+
+
 
 ```{r}
 # Cargar librerías necesarias
 library(rpart)
 library(rpart.plot)
 library(ggplot2)
+library(gganimate)
+library(dplyr)
+library(gifski)
+library(tibble)
+library(forcats)
 
->>>>>>> e7fc7b482095c72cf7be0c9cbc6b1461fa11d3ca
-# Dividir datos en entrenamiento y prueba
-set.seed(42)
-trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
-trainData <- df_cleaned[trainIndex, ]
-testData  <- df_cleaned[-trainIndex, ]
+# Asumiendo que 'tree_model' y 'testData' están disponibles
+# Y que 'testData' contiene la variable 'Improved' (1 si mejoró, 0 si no)
 
-# Entrenar el Árbol de Decisión Optimizado
-tree_model <- rpart(Improved ~ ., 
-                    data = trainData %>% select(-Exam_Score, -Previous_Scores, -Score_Improvement), 
-                    method = "class", 
-                    control = rpart.control(cp = 0.005, minsplit = 10, maxdepth = 7))
+# 1️⃣ Añadir un identificador único para cada estudiante
+testData <- testData %>% mutate(id = 1:nrow(testData))
 
-# Mejora de la visualización con rpart.plot()
-rpart.plot(tree_model, 
-           type = 2,  # Árbol detallado con nodos rectangulares
-           extra = 104,  # Mostrar porcentaje de datos en cada nodo
-           box.palette = "BuGn",  # Paleta de colores para los nodos
-           tweak = 1.2,  # Ajuste del tamaño del árbol
-           main = "Árbol de Decisión Mejorado")
-
-# Guardar imagen en alta resolución
-png("Decision_Tree_Optimized.png", width = 1200, height = 800)
-rpart.plot(tree_model, type = 2, extra = 104, box.palette = "BuGn", tweak = 1.2, main = "Árbol de Decisión Mejorado")
-dev.off()
-
-# Hacer predicciones con el modelo optimizado
-tree_pred <- predict(tree_model, newdata = testData, type = "class")
-
-# Evaluar el modelo optimizado
-tree_accuracy <- mean(tree_pred == testData$Improved)
-tree_conf_matrix <- table(Predicted = tree_pred, Actual = testData$Improved)
-
-# Mostrar resultados
-print(paste("Optimized Decision Tree Accuracy:", tree_accuracy))
-print("Optimized Decision Tree Confusion Matrix:")
-print(tree_conf_matrix)
-
-```
-
-
-* Si un estudiante ya tiene una calificación alta (High_Score = 1), **no se espera una mejora significativa**. Es decir, los estudiantes con alto rendimiento tienen menos margen de mejora.
-
-* La asistencia a clases es un factor fundamental para mejorar el rendimiento académico. Si la asistencia (Attendance) es **menor a 84%, la probabilidad de mejora es baja (35% de mejora)**.
-Si la asistencia es **mayor o igual a 84%, se consideran otros factores adicionales que pueden influir en la mejora**.
-
-* Si Attendance >= 84%, la distancia al colegio (Distance_from_Home) afecta la mejora:
-
-    * Si un estudiante vive a **más de 3 km**, la probabilidad de mejora es **33%**.
-    * Si un estudiante vive a **menos de 3 km**, se evalúan otros factores como las **horas de estudio**.
-    
-En conclusión, **los estudiantes que viven más lejos tienen menos probabilidad de mejorar, posiblemente debido a tiempos de traslado prolongados y fatiga**.
-
-Si un estudiante estudia **menos de 20 horas semanales, la tutoría (Tutoring_Sessions) se convierte en un factor relevante**:
-
-* Si **Tutoring_Sessions < 0.38**, la probabilidad de mejorar es **41%**.
-
-Si **Tutoring_Sessions >= 0.38**, la probabilidad de mejora aumenta a **54%**.
-
-* Si un estudiante estudia **más de 20 horas semanales**, la probabilidad de mejorar es **57%**. Sin embargo, en este caso, **el nivel de involucramiento parental (Parental_Involvement) comienza a ser un factor clave**:
-
-* Si Parental_Involvement < 3, la asistencia del estudiante se vuelve un elemento determinante:
-
-    * Si **Attendance < 97%**, la probabilidad de mejora es **13%**.
-    * Si **Attendance >= 97%**, la probabilidad de mejora aumenta a **33%**.
-    
-* Si **Parental_Involvement >= 3**, la probabilidad de mejora es **67%**.
-
-En conclusión, **estudiar más de 20 horas a la semana aumenta significativamente la probabilidad de mejora**. Para los estudiantes con menos horas de estudio, **recibir tutorías ayuda a mejorar su rendimiento**. Además, **un alto nivel de involucramiento parental y una asistencia superior al 97% pueden compensar la falta de apoyo familiar**.
-
-
-```{r}
-# Dividir datos en entrenamiento y prueba
-set.seed(42)
-trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
-trainData <- df_cleaned[trainIndex, ]
-testData  <- df_cleaned[-trainIndex, ]
-
-# Entrenar el Árbol de Decisión
-tree_model <- rpart(Improved ~ Attendance + Hours_Studied + Tutoring_Sessions, 
-                    data = trainData, 
-                    method = "class", 
-                    control = rpart.control(cp = 0.005, minsplit = 10, maxdepth = 4))
-
-# Definir los pasos del árbol con etiquetas mejoradas
+# 2️⃣ Asegurarse de que 'Improved' es una variable categórica con etiquetas
 testData <- testData %>%
   mutate(
-    step = case_when(
-      Attendance < 84 ~ "Paso 1: Asistencia < 84% (Rojo)", 
-      Hours_Studied < 20 ~ "Paso 2: Horas de Estudio < 20 (Azul)", 
-      Tutoring_Sessions < 0.38 ~ "Paso 3: Tutorías < 0.38 (Verde)", 
-      TRUE ~ "Paso 4: Segmentación Final (Morado)"
-    ),
-    classification = as.factor(Improved) # Guardamos la clasificación
+    Improved = factor(Improved, levels = c(0, 1), labels = c("No mejoró", "Mejoró"))
   )
 
-# Asignar colores a las fases del árbol
-color_mapping <- c("Paso 1: Asistencia < 84% (Rojo)" = "red", 
-                   "Paso 2: Horas de Estudio < 20 (Azul)" = "blue", 
-                   "Paso 3: Tutorías < 0.38 (Verde)" = "green",
-                   "Paso 4: Segmentación Final (Morado)" = "purple")
+# 3️⃣ Asignar a cada fila del dataset su etapa en el árbol
+assign_tree_steps <- function(data) {
+  data %>%
+    mutate(
+      step = case_when(
+        Attendance < 79.5 ~ "Paso 1: Attendance < 79.5%",
+        Attendance >= 79.5 & Parental_Involvement < 2.5 ~ "Paso 2: Parental_Involvement < 2.5",
+        Attendance >= 79.5 & Parental_Involvement >= 2.5 & Hours_Studied < 29.5 ~ "Paso 3: Hours_Studied < 29.5",
+        Attendance >= 79.5 & Parental_Involvement >= 2.5 & Hours_Studied >= 29.5 ~ "Paso 4: Hours_Studied >= 29.5",
+        TRUE ~ "Paso 5: Decisión Final"
+      ),
+      # Ordenar las etapas correctamente
+      step = factor(step, levels = c(
+        "Paso 1: Attendance < 79.5%",
+        "Paso 2: Parental_Involvement < 2.5",
+        "Paso 3: Hours_Studied < 29.5",
+        "Paso 4: Hours_Studied >= 29.5",
+        "Paso 5: Decisión Final"
+      ))
+    )
+}
 
-# Asignar colores específicos a la clasificación
-classification_colors <- c("0" = "black", "1" = "yellow") # Mayor contraste
+testData_animated <- assign_tree_steps(testData)
 
-# Crear una tabla con las reglas del árbol
-tree_rules <- data.frame(
-  step = c(1, 2, 3, 4), 
-  rule = c(
-    "Inicio: Todos los datos",
-    "División: Asistencia < 84%",
-    "División: Horas de Estudio < 20",
-    "División: Tutorías < 0.38"
-  )
+# 4️⃣ Definir colores para cada etapa y shapes para 'Improved'
+color_mapping <- c(
+  "Paso 1: Attendance < 79.5%" = "#E41A1C",     # Rojo
+  "Paso 2: Parental_Involvement < 2.5" = "#377EB8", # Azul
+  "Paso 3: Hours_Studied < 29.5" = "#4DAF4A",   # Verde
+  "Paso 4: Hours_Studied >= 29.5" = "#984EA3",  # Morado
+  "Paso 5: Decisión Final" = "#FF7F00"          # Naranja
 )
 
-# Crear la animación con colores mejorados y movimiento más fluido
-animated_plot <- ggplot(testData, aes(x = Attendance, y = Hours_Studied, 
-                                      color = classification)) +
-  geom_point(size = 3, alpha = 0.8) +
-  geom_vline(xintercept = 84, linetype = "dashed", color = "red", size = 1) +  # Regla de asistencia
-  geom_hline(yintercept = 20, linetype = "dashed", color = "blue", size = 1) + # Regla de horas de estudio
-  labs(title = "Proceso de Decisión en el Árbol de Decisión", 
-       subtitle = "{tree_rules$rule[as.integer(frame_time)]}", 
-       x = "Asistencia (%)", 
-       y = "Horas de Estudio por Semana") +
-  scale_color_manual(values = classification_colors, name = "Clasificación Final") +  # Ahora los colores representan 0 o 1
-  theme_minimal() +
-  theme(plot.title = element_text(size = 16, face = "bold"),
-        plot.subtitle = element_text(size = 12)) +
-  transition_states(as.integer(as.factor(step)), 
-                    transition_length = 4, # Hace la transición más larga y fluida
-                    state_length = 2) + # Tiempo de pausa entre pasos reducido para continuidad
-  ease_aes('linear')  # Movimiento más continuo
+shape_mapping <- c("No mejoró" = 21, "Mejoró" = 24)
 
-# Guardar y mostrar animación con duración más lenta y fluida
-animate(animated_plot, duration = 12, fps = 8, renderer = gifski_renderer()) # 12s de duración
-anim_save("decision_tree_animation_smooth.gif")
+# 5️⃣ Crear la animación
+animated_plot <- ggplot(testData_animated, aes(x = Attendance, y = Hours_Studied, group = id)) +
+  geom_point(aes(color = step, shape = Improved, fill = Improved), size = 3, alpha = 0.8) +
+  scale_color_manual(values = color_mapping, name = "Etapa del Árbol") +
+  scale_shape_manual(values = shape_mapping, name = "Mejora") +
+  scale_fill_manual(values = c("No mejoró" = "white", "Mejoró" = "black"), name = "Mejora") +
+  labs(
+    title = "Evolución de las Decisiones en el Árbol de Decisión",
+    subtitle = "Etapa: {closest_state}",
+    x = "Asistencia (%)",
+    y = "Horas de Estudio por Semana"
+  ) +
+  theme_minimal(base_size = 14) +
+  transition_states(
+    step,
+    transition_length = 4,
+    state_length = 1,
+    wrap = FALSE
+  ) +
+  ease_aes('quadratic-in-out')
 
-
-```
-```{r}
-# Dividir datos en entrenamiento y prueba
-set.seed(42)
-trainIndex <- createDataPartition(df_cleaned$Improved, p = 0.7, list = FALSE)
-trainData <- df_cleaned[trainIndex, ]
-testData  <- df_cleaned[-trainIndex, ]
-
-# Entrenar el Árbol de Decisión
-tree_model <- rpart(Improved ~ Attendance + Hours_Studied + Tutoring_Sessions, 
-                    data = trainData, 
-                    method = "class", 
-                    control = rpart.control(cp = 0.005, minsplit = 10, maxdepth = 4))
-
-# Definir los pasos del árbol
-testData <- testData %>%
-  mutate(
-    step = case_when(
-      Attendance < 84 ~ "Paso 1: Asistencia < 84%",
-      Hours_Studied < 20 ~ "Paso 2: Horas de Estudio < 20",
-      Tutoring_Sessions < 0.38 ~ "Paso 3: Tutorías < 0.38",
-      TRUE ~ "Paso 4: Segmentación Final"
-    )
-  )
-
-# Crear la visualización interactiva
-interactive_plot <- plot_ly(testData, x = ~Attendance, y = ~Hours_Studied, color = ~step, 
-                            colors = c("red", "blue", "green", "purple"),
-                            type = 'scatter', mode = 'markers',
-                            text = ~paste("Tutorías:", Tutoring_Sessions, "<br>Mejora:", Improved)) %>%
-  layout(title = "Evolución de las Decisiones en el Árbol de Decisión",
-         xaxis = list(title = "Asistencia (%)"),
-         yaxis = list(title = "Horas de Estudio por Semana"),
-         legend = list(title = list(text = "Etapa de Segmentación")))
-
-# Mostrar el gráfico interactivo
-interactive_plot
+# 6️⃣ Guardar la animación como GIF
+animate(
+  animated_plot,
+  width = 800,
+  height = 600,
+  duration = 12,
+  fps = 20,
+  renderer = gifski_renderer()
+)
+anim_save("arbol_decision_animado.gif")
 
 ```
 
