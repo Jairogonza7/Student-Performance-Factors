@@ -1,0 +1,149 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+# ¿Los factores institucionales en el rendimiento académico de los estudiantes?
+
+A menudo, los padres atribuyen el desempeño académico de sus hijos únicamente a su esfuerzo y dedicación. Sin embargo, el **entorno escolar y los factores institucionales** también pueden desempeñar un papel crucial en la obtención de buenas calificaciones. Aspectos como la *calidad del docente*, el *tipo de escuela* y la *distancia entre el hogar* pueden influir en el aprendizaje y el rendimiento de los estudiantes. 
+
+Para comprender mejor esta relación, es fundamental realizar análisis estadísticos que permitan identificar correlaciones o diferencias significativas entre estos factores y el desempeño académico.
+
+Este estudio tiene como objetivo analizar **el impacto de los factores institucionales en el rendimiento académico**, evaluando en qué medida estos elementos afectan las calificaciones de los estudiantes. 
+De este modo, los hallazgos obtenidos podrían contribuir a la mejora de las políticas educativas, la optimización de recursos en las instituciones escolares y el desarrollo de estrategias que reduzcan desigualdades en el aprendizaje. Comprender estas dinámicas permitirá identificar oportunidades para fortalecer el sistema educativo y promover un acceso más equitativo a una educación de calidad.
+
+## Librerías
+
+La función ipak está diseñada para facilitar la instalación y carga de paquetes en R. Es útil cuando desea asegurarse de que todos los paquetes necesarios para un script o proyecto se instalan y cargan automáticamente. <https://gist.github.com/stevenworthington/3178163>
+
+```{r}
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if(length(new.pkg))
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car", "ggridges", "factoextra", "cluster", "NbClust", "RColorBrewer")
+ipak(packages)
+```
+
+## Exploración de datos  
+
+Antes de realizar cualquier análisis, es fundamental explorar el conjunto de datos para comprender la estructura de los mismos, identificar posibles inconsistencias y verificar la presencia de valores faltantes. En esta sección, realizamos una inspección inicial del dataset.  
+
+### Lectura de los datos  
+
+Cargamos el dataset desde el archivo CSV y verificamos su correcta importación:  
+
+```{r}
+data <- read.csv("data/StudentPerformanceFactors.csv", header=TRUE)
+```
+
+### Visualizar las 6 primeras instancias del data frame
+
+```{r}
+head(data)
+```
+
+### Estructura resumida del data frame
+
+```{r}
+str(data)
+```
+
+El dataset está compuesto por **6,607 filas** y **20 columnas**, las cuales incluyen atributos de distintos tipos: *numéricos*, *categóricos* y *booleanos*.
+
+A continuación, se describen algunos de estos atributos:
+
+-   **Hours_Studied**: Número de horas de estudio semanales.
+
+-   **Attendance**: Porcentaje de clases a las que ha asistido.
+
+-   **Parental_Involvement**: Nivel de implicación de los padres en la educación del alumno *(Low, Medium, High)*.
+
+-   **Access_to_Resources**: Disponibilidad de recursos educativos *(Low, Medium, High)*.
+
+-   **Extracurricular_Activities**: Participación en actividades extraescolares *(Yes, No)*.
+
+-   **Sleep_Hours**: Número medio de horas de sueño por noche.
+
+-   **Previous_Scores**: Puntuaciones de exámenes anteriores.
+
+-   **Motivation_Level**: Nivel de motivación del estudiante *(Low, Medium, High)*.
+
+-   **Internet_Access**: Disponibilidad de acceso a Internet *(Yes, No)*.
+
+-   **Tutoring_Sessions**: Número de sesiones de tutoría a las que asiste al mes.
+
+-   **Family_Income**: Nivel de ingresos familiares *(Low, Medium, High)*.
+
+-   **Teacher_Quality**: Calidad de los profesores *(Low, Medium, High)*.
+
+-   **School_Type**: Tipo de escuela a la que asistió *(Public, Private)*.
+
+-   **Peer_Influence**: Influencia de los compañeros en el rendimiento académico *(Positive, Neutral, Negative)*.
+
+-   **Physical_Activity**: Número medio de horas de actividad física a la semana.
+
+-   **Learning_Disabilities**: Presencia de dificultades de aprendizaje *(Yes, No)*.
+
+-   **Parental_Education_Level**: Nivel educativo más alto de los padres *(High School, College, Postgraduate)*.
+
+-   **Distance_from_Home**: Distancia de casa a la escuela *(Near, Moderate, Far)*.
+
+-   **Gender**: Género del estudiante *(Male, Female)*.
+
+-   **Exam_Score**: Calificación del examen final.
+
+## Preprocesamiento de los datos
+
+Esta función muestra las filas con valores NA o valores vacios("").
+
+```{r}
+detect_missing_data <- function(df) {
+  na_count <- colSums(is.na(df))  # Contar los NA en cada columna
+  empty_count <- colSums(sapply(df, function(x) x == ""))  # Contar los valores vacíos en cada columna
+  
+  missing_data <- data.frame(NA_Count = na_count, Empty_Count = empty_count)
+  missing_data <- missing_data[missing_data$NA_Count > 0 | missing_data$Empty_Count > 0, ]
+  
+  return(missing_data)
+}
+
+
+missing_data <- detect_missing_data(data)
+missing_data
+```
+
+En el resultado arrojado por la función podemos observar que no existen valores **NA** en las columnas de nuestro dataframe, lo que significa que no hay datos explícitamente faltantes o nulos. Sin embargo, también notamos que hay filas con **valores vacíos** en ciertas variables categóricas.
+
+Al sumar el total de valores faltantes podemos observar que puede haber un máximo de **235 filas** con algún valor faltante. Esto supone aproximadamente el **3.56%** del total de filas del conjunto de datos.
+
+Dado que la proporción de filas con valores faltantes es relativamente baja, consideramos eliminar estas instancias ya que creemos que no tendrá un impacto significativo en la integridad general del dataset.
+
+```{r}
+clean_missing_data <- function(df) {
+  original_row_count <- nrow(df)
+  
+  df <- df[!apply(df, 1, function(x) any(is.na(x) | x == "")), ] #Borramos las filas
+  
+  cleaned_row_count <- nrow(df)
+  rows_removed <- original_row_count - cleaned_row_count
+  cat("Número de filas eliminadas:", rows_removed, "\n")
+  
+  return(df)
+}
+
+data <- clean_missing_data(data)
+```
+
+Observamos que se han eliminado 229 filas por lo que el dataset sin ningún valor de faltante constaría de un total de **6378 filas**.
+
+
+Debido a que nuestro estudio
+

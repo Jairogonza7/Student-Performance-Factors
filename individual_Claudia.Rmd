@@ -1,0 +1,314 @@
+---
+title: "Students Performance Factors"
+author: "Claudia Teresa Heredia Ceballos"
+---
+
+# Students Performance Factors
+
+**Trabajo Final Data Science**
+
+*Master en Ingeniería del Software: Cloud, Datos y Gestión de TI*
+
+## Descripción del dominio
+
+### Enfoque del Trabajo
+
+### Interés y motivación del estudio CAMBIO
+
+### Importancia local/nacional y en el contexto actual
+
+```{r}
+library(magrittr)
+library(dplyr)
+```
+
+## Descripción del dataset
+
+Para la resolución de esta pregunta se partirá de los datos preprocesados en 'global.rmd'.
+
+```{r}
+
+df_cleaned <- read.csv("data/df_cleaned.csv")
+df_cleaned_c <-  df_cleaned %>%
+  select(-Previous_Scores_Category)
+df_cleaned_c
+```
+
+SOLUCIÓN 1: PREDICCIÓN DE EXAM_SCORE MEDIANTE GENERACIÓN DE DATOS SINTÉTICOS
+
+#### Análisis exploratorio de 'exam_score'
+
+```{r}
+# Cargar librerías necesarias
+library(ggplot2)
+
+# Histograma de exam_score
+ggplot(df_cleaned_c, aes(x = Exam_Score)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribución de 'Exam_Score'", x = "Exam Score", y = "Frecuencia")
+
+```
+
+```{r}
+# Calcular estadísticas descriptivas
+summary(df_cleaned_c$Exam_Score)
+
+# Calcular desviación estándar
+sd_exam <- sd(df_cleaned_c$Exam_Score)
+cat("Desviación estándar de exam_score:", sd_exam)
+
+```
+
+#### Generación de datos sintéticos para 'exam_score'
+
+```{r}
+set.seed(123)
+
+# Aplicar K-Means para agrupar estudiantes similares
+num_clusters <- 4
+clusters <- kmeans(df_cleaned_c$Exam_Score, centers = num_clusters, nstart = 10)
+df_cleaned_c$Cluster <- clusters$cluster
+
+# Interpolación y generación de nuevos datos
+expandir_cluster <- function(df_cluster) {
+  n <- nrow(df_cluster)
+  if (n < 2) return(df_cluster)  # Evitar problemas en clusters pequeños
+  
+  # Generar nuevos valores interpolados
+  nuevos_puntos <- seq(min(df_cluster$Exam_Score), max(df_cluster$Exam_Score), length.out = n * 2)
+  nuevos_puntos <- sample(nuevos_puntos, size = n, replace = TRUE)  # Aleatorizar la selección
+  df_cluster$Exam_Score <- nuevos_puntos
+  return(df_cluster)
+}
+
+# Aplicar la expansión en cada cluster
+df_sintetico <- df_cleaned_c %>% group_by(Cluster) %>% group_modify(~ expandir_cluster(.x)) %>% ungroup()
+
+# Añadir ruido proporcional a la dispersión de cada cluster
+df_sintetico <- df_sintetico %>% mutate(
+  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd_exam * 0.5)
+)
+
+# Limitar valores a 55-100
+df_sintetico$Exam_Score <- pmax(pmin(df_sintetico$Exam_Score, 100), 55)
+
+# Verificar la nueva distribución
+summary(df_sintetico$Exam_Score)
+sd_exam_sintetico <- sd(df_sintetico$Exam_Score)
+cat("Desviación estándar de exam_score sintético:", sd_exam_sintetico)
+```
+
+
+
+```{r}
+
+# Combinar los dataframes
+df_combined <- rbind(df_cleaned_c
+                     , df_sintetico)
+
+# Verificar el nuevo dataframe
+dim(df_combined)  # Debería tener el doble de filas que el original
+
+```
+
+
+
+```{r}
+
+# Generar histograma
+ggplot(df_combined, aes(x = Exam_Score)) +
+  geom_histogram(binwidth = 5, fill = "purple", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribución de 'exam_score' Combinado", x = "Exam Score", y = "Frecuencia")
+
+```
+
+
+
+
+#### Feature Engineering
+
+```{r}
+# Mostrar los nombres de las columnas de df_combined
+colnames(df_combined)
+
+```
+
+```{r}
+# Crear nuevas variables en df_combined
+df_combined <- df_cleaned_c %>% mutate(
+  study_sleep_ratio = scale(Hours_Studied / (Sleep_Hours + 1)),  # Normalización
+  motivated_study = scale(Hours_Studied * Motivation_Level),
+  parent_peer_influence = scale(Parental_Involvement * Peer_Influence)
+)
+
+# Verificar las nuevas variables
+summary(df_combined)
+```
+
+#### Modelo
+
+```{r}
+# Definir la variable objetivo
+target_variable <- "Exam_Score"
+
+# Obtener los nombres de todas las variables
+all_variables <- names(df_combined)
+
+# Excluir la variable objetivo y cualquier identificador
+predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
+
+# Verificar las variables seleccionadas
+print(predictor_variables)
+
+```
+
+Division en entrenamiento y prueba:
+
+```{r}
+# Cargar la librería necesaria
+#install.packages("lattice")
+
+library(caret)
+library(lattice)
+# Definir la semilla para reproducibilidad
+set.seed(123)
+
+# Crear índices para dividir los datos
+trainIndex <- createDataPartition(df_combined[[target_variable]], p = 0.8, list = FALSE)
+
+# Crear los conjuntos de entrenamiento y prueba
+train_data <- df_combined[trainIndex, ]
+test_data <- df_combined[-trainIndex, ]
+
+# Verificar las dimensiones
+cat("Dimensiones del conjunto de entrenamiento:", dim(train_data), "\n")
+cat("Dimensiones del conjunto de prueba:", dim(test_data), "\n")
+
+```
+
+```{r}
+# Instalar las librerías si aún no las tienes
+#install.packages("randomForest")
+#install.packages("caret")
+#install.packages("ggplot2")
+
+# Cargar las librerías
+library(randomForest)
+library(caret)
+library(ggplot2)
+
+```
+
+Datos sin escalar:
+
+```{r}
+# Optimización de hiperparámetros con tuneGrid
+rf_grid <- expand.grid(mtry = seq(2, length(predictor_variables), by = 2))
+rf_control <- trainControl(method = "cv", number = 5, search = "grid")
+```
+
+
+```{r}
+# Definir la fórmula del modelo
+modelo_formula <- as.formula(paste(target_variable, "~", paste(predictor_variables, collapse = " + ")))
+
+# Configurar el control de entrenamiento
+control <- trainControl(method = "cv", number = 5)  # Validación cruzada de 5 pliegues
+
+```
+
+
+entrenamiento RF
+
+```{r}
+# Entrenar el modelo
+set.seed(123)
+rf_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "rf",
+  tuneGrid = rf_grid,
+  trControl = rf_control,
+  importance = TRUE
+)
+
+```
+
+evaluacion
+```{r}
+# Evaluación del modelo
+rf_pred <- predict(rf_model, newdata = test_data)
+r2 <- cor(test_data$Exam_Score, rf_pred)^2
+cat("R^2 del modelo Random Forest:", r2, "\n")
+
+```
+
+
+
+
+
+
+importancia de variables:
+
+```{r}
+
+
+# Visualizar la importancia
+varImpPlot(rf_model$finalModel, main = "Importancia de las Variables en el Modelo Random Forest")
+
+
+```
+
+Regresion Lineal
+
+```{r}
+# Entrenar el modelo de regresión lineal
+set.seed(123)
+modelo_lm <- caret::train(
+  form = modelo_formula,
+  data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5)
+)
+
+# Predicciones
+predicciones_lm <- predict(modelo_lm, newdata = test_data)
+
+# Métricas de rendimiento
+mae_lm <- MAE(predicciones_lm, test_data[[target_variable]])
+rmse_lm <- RMSE(predicciones_lm, test_data[[target_variable]])
+r2_lm <- R2(predicciones_lm, test_data[[target_variable]])
+
+cat("Regresión Lineal - MAE:", mae_lm, "\n")
+cat("Regresión Lineal - RMSE:", rmse_lm, "\n")
+cat("Regresión Lineal - R²:", r2_lm, "\n")
+
+```
+SVR
+```{r}
+# Entrenar el modelo SVR
+set.seed(123)
+modelo_svr <- caret::train(
+  form = modelo_formula,
+  data = train_data,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 5),
+  preProcess = c("center", "scale"),
+  tuneLength = 5
+)
+
+# Predicciones
+predicciones_svr <- predict(modelo_svr, newdata = test_data)
+
+# Métricas de rendimiento
+mae_svr <- MAE(predicciones_svr, test_data[[target_variable]])
+rmse_svr <- RMSE(predicciones_svr, test_data[[target_variable]])
+r2_svr <- R2(predicciones_svr, test_data[[target_variable]])
+
+cat("SVR - MAE:", mae_svr, "\n")
+cat("SVR - RMSE:", rmse_svr, "\n")
+cat("SVR - R²:", r2_svr, "\n")
+
+```
+
