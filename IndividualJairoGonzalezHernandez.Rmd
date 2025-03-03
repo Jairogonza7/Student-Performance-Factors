@@ -1,24 +1,46 @@
 ---
-title: "R Notebook"
+title: "Parte Individual Trabajo Data Science"
+author: "Jairo González Hernández"
 output: html_notebook
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+# Students Performance Factors
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+**Trabajo Final Data Science**
 
-# ¿Los factores institucionales en el rendimiento académico de los estudiantes?
+*Master en Ingeniería del Software: Cloud, Datos y Gestión de TI*
 
-A menudo, los padres atribuyen el desempeño académico de sus hijos únicamente a su esfuerzo y dedicación. Sin embargo, el **entorno escolar y los factores institucionales** también pueden desempeñar un papel crucial en la obtención de buenas calificaciones. Aspectos como la *calidad del docente*, el *tipo de escuela* y la *distancia entre el hogar* pueden influir en el aprendizaje y el rendimiento de los estudiantes. 
+#PREGUNTA 1.
+¿Los factores institucionales influyen en el rendimiento académico de los estudiantes?
 
-Para comprender mejor esta relación, es fundamental realizar análisis estadísticos que permitan identificar correlaciones o diferencias significativas entre estos factores y el desempeño académico.
+A menudo, los padres tienden a atribuir el rendimiento académico de sus hijos exclusivamente al esfuerzo y dedicación individual.
+No obstante, el **entorno escolar y los factores institucionales** juegan un papel igualmente crucial en la obtención de buenos resultados académicos.
+Diversos estudios han demostrado que los factores institucionales tienen un impacto considerable en el desempeño de los estudiantes.
+Por ejemplo, estudios como los de **Hattie (2009)**, sugieren que la calidad del profesorado es uno de los factores con mayor impacto en el rendimiento académico de los estudiantes.
+Además, **Bashir & Liu (2016)** evidencian cómo el tipo de escuela, ya sea pública o privada, puede influir en los resultados académicos debido a diferencias en infraestructura, recursos y metodologías de enseñanza.
 
-Este estudio tiene como objetivo analizar **el impacto de los factores institucionales en el rendimiento académico**, evaluando en qué medida estos elementos afectan las calificaciones de los estudiantes. 
-De este modo, los hallazgos obtenidos podrían contribuir a la mejora de las políticas educativas, la optimización de recursos en las instituciones escolares y el desarrollo de estrategias que reduzcan desigualdades en el aprendizaje. Comprender estas dinámicas permitirá identificar oportunidades para fortalecer el sistema educativo y promover un acceso más equitativo a una educación de calidad.
+Por tanto,elementos como la *calidad del profesorado*, el *tipo de institución educativa* y *el ambite en las clases* pueden influir de manera significativa en el proceso de aprendizaje y en el rendimiento académico de los estudiantes.
+
+Para comprender mejor la relación entre estos factores y el rendimiento académico, es esencial llevar a cabo análisis estadísticos que permitan identificar correlaciones o diferencias significativas.
+Esto puede proporcionar información valiosa sobre cómo optimizar las condiciones institucionales para mejorar los resultados educativos.
+
+Este estudio tiene como objetivo analizar **el impacto de los factores institucionales en el rendimiento académico**, evaluando en qué medida estos elementos afectan las calificaciones de los estudiantes.
+De este modo, los hallazgos obtenidos podrían contribuir a la mejora de las políticas educativas, la optimización de recursos en las instituciones escolares y el desarrollo de estrategias que reduzcan desigualdades en el aprendizaje.
+Comprender estas dinámicas permitirá identificar oportunidades para fortalecer el sistema educativo y promover un acceso más equitativo a una educación de calidad.
+
+A continuación, se muestran una serie de preguntas que se pueden llegar a responder con este pequeño estudio:
+
+-   **¿Qué factor institucional tiene mayor impacto en el exámen final?**
+-   **¿Las escuelas públicas y privadas muestran diferencias significativas?**
 
 ## Librerías
 
-La función ipak está diseñada para facilitar la instalación y carga de paquetes en R. Es útil cuando desea asegurarse de que todos los paquetes necesarios para un script o proyecto se instalan y cargan automáticamente. <https://gist.github.com/stevenworthington/3178163>
+La función ipak está diseñada para facilitar la instalación y carga de paquetes en R.
+Es útil cuando desea asegurarse de que todos los paquetes necesarios para un script o proyecto se instalan y cargan automáticamente.
+<https://gist.github.com/stevenworthington/3178163>
 
 ```{r}
 ipak <- function(pkg){
@@ -28,122 +50,1368 @@ ipak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "car", "ggridges", "factoextra", "cluster", "NbClust", "RColorBrewer")
+packages <- c("tidyverse","ggplot2", "dplyr","gridExtra", "reshape2", "igraph", "car", "ggridges", "factoextra", "cluster", "NbClust", "RColorBrewer","caret", "gbm", "arules", "arulesViz")
+
 ipak(packages)
 ```
 
-## Exploración de datos  
+## Lectura de los datos
 
-Antes de realizar cualquier análisis, es fundamental explorar el conjunto de datos para comprender la estructura de los mismos, identificar posibles inconsistencias y verificar la presencia de valores faltantes. En esta sección, realizamos una inspección inicial del dataset.  
+El punto de partida para este estudio será el conjunto de datos almacenado en **"df_cleaned.csv"**, un **archivo CSV** que contiene el dataframe global completamente preprocesado.
+En este conjunto de datos, se han llevado a cabo diversas tareas de limpieza, incluyendo la eliminación de filas con valores nulos o faltantes, el tratamiento de valores atípicos, la codificación de variables categóricas y la escalado de variables temporales.
 
-### Lectura de los datos  
+El proceso completo de preprocesamiento de datos está documentado en el Notebook `global.Rmd`.
 
-Cargamos el dataset desde el archivo CSV y verificamos su correcta importación:  
-
-```{r}
-data <- read.csv("data/StudentPerformanceFactors.csv", header=TRUE)
-```
-
-### Visualizar las 6 primeras instancias del data frame
+Cargamos el dataset desde el **archivo CSV** y verificamos su correcta importación:
 
 ```{r}
+data <- read.csv("data/df_cleaned.csv", header=TRUE)
 head(data)
 ```
 
-### Estructura resumida del data frame
+```{r}
+dim(data)
+```
+
+Vamos a examinar la estructura del conjunto de datos para obtener un resumen de las variables presentes, su tipo de dato y una visión general de cómo están organizados los datos.
 
 ```{r}
 str(data)
 ```
 
-El dataset está compuesto por **6,607 filas** y **20 columnas**, las cuales incluyen atributos de distintos tipos: *numéricos*, *categóricos* y *booleanos*.
+El conjunto de datos preprocesado df_cleaned está compuesto por **6,378 filas y 23 columnas**.
+Como podemos observar, dichas variables han sido convertidas a **valores enteros** y ya han sido transformadas mediante el proceso de **One-Hot Encoding** para convertir variables categóricas en variables numéricas binarias.
 
-A continuación, se describen algunos de estos atributos:
+A continuación, se describen estos atributos:
 
 -   **Hours_Studied**: Número de horas de estudio semanales.
 
 -   **Attendance**: Porcentaje de clases a las que ha asistido.
 
--   **Parental_Involvement**: Nivel de implicación de los padres en la educación del alumno *(Low, Medium, High)*.
+-   **Parental_Involvement**: Nivel de implicación de los padres en la educación del alumno *(1,2,3)*.
 
--   **Access_to_Resources**: Disponibilidad de recursos educativos *(Low, Medium, High)*.
+-   **Access_to_Resources**: Disponibilidad de recursos educativos *(1,2,3)*.
 
--   **Extracurricular_Activities**: Participación en actividades extraescolares *(Yes, No)*.
+-   **Extracurricular_Activities**: Participación en actividades extraescolares *(1,0)*.
 
 -   **Sleep_Hours**: Número medio de horas de sueño por noche.
 
 -   **Previous_Scores**: Puntuaciones de exámenes anteriores.
 
--   **Motivation_Level**: Nivel de motivación del estudiante *(Low, Medium, High)*.
+-   **Motivation_Level**: Nivel de motivación del estudiante *(1,2,3)*.
 
--   **Internet_Access**: Disponibilidad de acceso a Internet *(Yes, No)*.
+-   **Internet_Access**: Disponibilidad de acceso a Internet *(1,0)*.
 
--   **Tutoring_Sessions**: Número de sesiones de tutoría a las que asiste al mes.
+-   **Tutoring_Sessions**: Número de sesiones de tutoría a las que asiste a la semana **(Entre 0 y 2)**.
 
--   **Family_Income**: Nivel de ingresos familiares *(Low, Medium, High)*.
+-   **Family_Income**: Nivel de ingresos familiares *(1,2,3)*.
 
--   **Teacher_Quality**: Calidad de los profesores *(Low, Medium, High)*.
+-   **Teacher_Quality**: Calidad de los profesores *(1,2,3)*.
 
--   **School_Type**: Tipo de escuela a la que asistió *(Public, Private)*.
+-   **School_Type_Private** : Indica si su escuela es **privada** *(1,0)*.
 
--   **Peer_Influence**: Influencia de los compañeros en el rendimiento académico *(Positive, Neutral, Negative)*.
+-   **School_Type_Public** : Indica si su escuela es **pública** *(1,0)*.
+
+-   **Peer_Influence**: Influencia de los compañeros en el rendimiento académico *(1,2,3)*.
 
 -   **Physical_Activity**: Número medio de horas de actividad física a la semana.
 
--   **Learning_Disabilities**: Presencia de dificultades de aprendizaje *(Yes, No)*.
+-   **Learning_Disabilities**: Presencia de dificultades de aprendizaje *(1, 0)*.
 
--   **Parental_Education_Level**: Nivel educativo más alto de los padres *(High School, College, Postgraduate)*.
+-   **Parental_Education_Level**: Nivel educativo más alto de los padres *(1, 2, 3)*.
 
--   **Distance_from_Home**: Distancia de casa a la escuela *(Near, Moderate, Far)*.
+-   **Distance_from_Home**: Distancia de casa a la escuela *(1, 2, 3)*.
 
--   **Gender**: Género del estudiante *(Male, Female)*.
+-   **Gender_Male**: Si el estudiante es de género masculino *(1, 0)*.
+
+-   **Gender_Female**: Si el estudiante es de género femenino *(1, 0)*.
 
 -   **Exam_Score**: Calificación del examen final.
 
+## Plan para el Análisis y Predicción del Rendimiento Académico Basado en Factores Institucionales
+
+El objetivo de este estudio es examinar **cómo los factores institucionales influyen en el rendimiento académico** de los estudiantes y utilizar esta información para predecir su calificación final (`Exam_Score`).
+Para ello, el análisis se desarrollará en dos etapas principales:
+
+1.  **Análisis Exploratorio de Datos (EDA)**
+
+En esta fase se explorarán los datos para identificar patrones y relaciones entre los factores institucionales y el rendimiento académico.
+Aunque el objetivo es predecir el valor de la variable `Exam_Score` haciendo uso de variables correspondientes a factores institucionales se realizará un análisis exploratorio para observar cómo estos factores pueden afectar otras variables académicas, como la asistencia, horas de estudio, entre otros.
+El objetivo de este análisis es identificar posibles correlaciones entre estos factores y obtener una visión preliminar sobre cómo podrían influir en el rendimiento académico.
+Este enfoque servirá como base para futuros estudios más profundos.
+
+2.  **Modelado Predictivo del Rendimiento Académico**
+
+Una vez comprendidas las relaciones entre los factores institucionales y el desempeño estudiantil, se implementará un modelo de predicción para estimar la calificación final de los alumnos en función de estas variables, con el objetivo de observar qué tan bien los factores institucionales pueden explicar el rendimiento académico.
+Este modelo permitirá identificar patrones y relaciones clave, así como predecir el rendimiento futuro de los estudiantes en función de las características del entorno escolar.
+
 ## Preprocesamiento de los datos
 
-Esta función muestra las filas con valores NA o valores vacios("").
+El primer paso es identificar las variables del conjunto de datos que representan factores institucionales, aquellos que dependen de la infraestructura educativa, el entorno escolar y los recursos disponibles.
+Para este estudio, se seleccionaron las siguientes variables clave:
+
+### Elección de Factores Institucionales
+
+El primer paso en este análisis es identificar las variables dentro del conjunto de datos que representan **factores institucionales**.
+Estos factores son aquellos que están directamente relacionados con la **infraestructura educativa**, el **entorno escolar** y los recursos disponibles dentro de la institución.
+En resumen, estos factores abarcan todas aquellas condiciones dependientes del centro que influyen en el aprendizaje de los estudiantes.
+
+Para este estudio, se seleccionaron las siguientes variables clave, las cuales han sido consideradas fundamentales para evaluar el impacto de los factores institucionales en el rendimiento académico de los estudiantes:
+
+-   **Teacher Quality (Calidad de los profesores)**: La calidad de los profesores es uno de los factores más determinantes en el éxito académico.
+    Los profesores con una formación sólida y habilidades pedagógicas adecuadas tienen la capacidad de enseñar de manera más efectiva, lo que se traduce en mejores resultados para los estudiantes.
+    Por lo tanto, esta variable es esencial para evaluar cómo la calidad educativa influye en el desempeño de los alumnos.
+
+-   **School_Type_Private / School_Type_Public (Tipo de escuela)**: El tipo de escuela, ya sea pública o privada, es otra variable crucial.
+    La diferencia entre escuelas públicas y privadas puede afectar el rendimiento debido a la variación en financiamiento, acceso a materiales, métodos de enseñanza, etc.
+
+-   **Peer_Influence (Influencia de compañeros)**: Aunque no es un factor institucional directo, la influencia de los compañeros está relacionada con el ambiente social y académico dentro de la escuela.
+    Un entorno positivo, donde los compañeros fomentan hábitos de estudio y motivación, puede ser un factor que mejore el rendimiento de los estudiantes.
+    Por el contrario, un ambiente negativo, en el que los compañeros influyan de manera perjudicial, podría desmotivar a los estudiantes y afectar su rendimiento.
+
+**NOTA**: En cuanto a `Peer_Influence`, aunque no se considera un factor estrictamente institucional, hemos optado por incluirlo en el estudio con el fin de enriquecer el análisis y obtener una perspectiva más integral de los elementos que impactan el rendimiento académico.
 
 ```{r}
-detect_missing_data <- function(df) {
-  na_count <- colSums(is.na(df))  # Contar los NA en cada columna
-  empty_count <- colSums(sapply(df, function(x) x == ""))  # Contar los valores vacíos en cada columna
+institucional_columns <- c("Teacher_Quality", "School_Type_Private",  "Peer_Influence")
+```
+
+### Elección de Factores académicos
+
+Como se mencionó anteriormente, aunque los modelos predictivos se centren exclusivamente en la calificación final del examen del estudiante, se llevará a cabo un análisis exploratorio para examinar cómo los factores institucionales se relacionan con diversas variables académicas.
+Para ello, debemos quedarnos con aquellas variables que reflejan de manera más directa los factores educativos que podrían tener un impacto en el desempeño de los estudiantes.
+En este caso nos vamos a quedar con:
+
+\-**Hours_Studied (Horas estudiadas)**: Esta variable refleja la cantidad de tiempo que el estudiante dedica a estudiar fuera del aula.
+Es un factor académico clave, ya que un mayor número de horas de estudio suele estar asociado con un mejor dominio de los contenidos y una preparación más sólida para los exámenes.
+
+-   **Attendance (Asistencia)**: La asistencia a clase es una medida fundamental del compromiso del estudiante con su aprendizaje.
+
+-   **Motivation_Level (Motivación del estudiante)**: La motivación influye directamente en la dedicación y esfuerzo que el estudiante pone en sus estudios por lo que también es un factor académico clave.
+
+\-**Previous_Scores (Calificaciones previas)**: Las calificaciones suponen el pilar clave en el rendimiento académico.
+Además,los estudiantes que han obtenido buenos resultados en el pasado suelen mantener un rendimiento alto en el futuro por lo que las calificaciones previas son un factor clave.
+
+-   **Exam_Score**: Es la variable dependiente principal que se quiere analizar, ya que representa la calificación final del examen, que es un reflejo directo del rendimiento académico.
+
+```{r}
+academic_columns <- c("Hours_Studied", "Attendance", "Motivation_Level", "Previous_Scores", "Exam_Score")
+```
+
+A continuación, eliminamos del dataframe las columnas restantes, ya que no son relevantes para el objetivo de nuestro estudio.
+
+```{r}
+relevant_columns <- c(institucional_columns, academic_columns)
+# Crear un nuevo dataframe con solo las variables relevantes
+df_cleaned <- data[, relevant_columns]
+str(df_cleaned)
+```
+
+Finalmente, nuestro conjunto de datos con el que trabajaremos en este estudio constará de **6378 filas** y **8 columnas**.
+Las variables con las que nos quedamos son las siguientes:
+
+Factores institucionales:
+
+-   **Teacher_Quality**: Calidad de los profesores (1: Baja, 2: Media, 3: Alta).
+-   **School_Type_Private**: Indica si la escuela es privada (0: No, 1: Sí).
+-   **Peer_Influence**: Influencia de los compañeros en el rendimiento académico (1: Negativa, 2: Neutra, 3: Positiva).
+
+Factores académicos:
+
+-   **Hours_Studied**: Número de horas de estudio semanales.
+-   **Attendance**: Porcentaje de asistencia a clases.
+-   **Motivation_Level**: Nivel de motivación del estudiante (1: Bajo, 2: Medio, 3: Alto).
+-   **Previous_Scores**: Calificaciones obtenidas en exámenes anteriores.
+-   **Exam_Score**: Calificación del examen final (variable dependiente).
+
+### Categorización de variables
+
+En este proceso, vamos a recategorizar algunas columnas, ya que al importar `df_cleaned`, todas las variables estaban en formato numérico, incluso las que en el dataset original eran categóricas por lo que es necesario discretizar estas variables para convertirlas en categorías, lo que nos permitirá visualizarlas de manera más clara y comprensible.
+
+**NOTA**: La categorización se realiza con el fin de mejorar la visualización de gráficas que muestran relaciones o distribuciones de variables categóricas, facilitando su interpretación.
+
+```{r}
+recategorize_variable <- function(data, var_name, new_labels) {
+  if (!var_name %in% names(data)) {
+    stop(paste("La variable", var_name, "no existe en el dataframe."))
+  }
   
-  missing_data <- data.frame(NA_Count = na_count, Empty_Count = empty_count)
-  missing_data <- missing_data[missing_data$NA_Count > 0 | missing_data$Empty_Count > 0, ]
+  # Convertimos la variable en un factor con los nuevos niveles
+  data[[var_name]] <- factor(data[[var_name]], labels = new_labels)
   
-  return(missing_data)
+  return(data)
+}
+```
+
+```{r}
+df_recategorize <- recategorize_variable(df_cleaned, "Motivation_Level", c("Low", "Medium", "High"))
+df_recategorize <- recategorize_variable(df_recategorize, "Teacher_Quality", c("Low", "Medium", "High"))
+df_recategorize <- recategorize_variable(df_recategorize, "Peer_Influence", c("Negative", "Neutral", "Positive"))
+df_recategorize$School_Type_Private <- factor(df_recategorize$School_Type_Private, levels = c(0, 1), labels = c("No", "Yes"))
+
+head(df_recategorize)
+```
+
+### Escalado de variables
+
+Por último, debido a que vamos a estudiar la correlación entre las variables, es importante normalizarlas previamente.
+Esto garantiza que las diferencias en escalas no afecten la interpretación de los resultados.
+
+Por ejemplo, la calificación final del examen (`Exam_Score`) suele oscilar entre **60 y 100**, mientras que el número de horas de estudio (`Hours_Studied`) puede encontrarse en un rango completamente distinto.
+A su vez, la variable `Attendance`, que mide el porcentaje de asistencia, se expresa en valores de 0 a 100.
+Estas diferencias en magnitud **pueden influir en el cálculo de correlaciones y en la interpretación de los modelos predictivos** de modo que se generen sesgos en el análisis.
+
+De esta forma, los patrones y relaciones identificados en los datos no estarán sesgados por diferencias en la escala de las variables.
+Además, muchos algoritmos de machine learning, como la regresión logística, convergen más rápido y de manera más estable cuando las variables están normalizadas.
+Esto mejora el rendimiento del modelo y ayuda a obtener predicciones más precisas.
+
+```{r}
+df_scaled <- df_cleaned
+df_scaled[sapply(df_cleaned, is.numeric)] <- scale(df_cleaned[sapply(df_cleaned, is.numeric)])
+
+# Convertir a tibble
+df_scaled <- as_tibble(df_scaled)
+```
+
+Almacenamos las variables escaladas en `df_scaled`.
+
+```{r}
+head(df_scaled)
+```
+
+## 1. Análisis exploratorio de los datos (EDA)
+
+### Distribuciones de Factores académicos
+
+En este apartado, estudiaremos como se distribuyen los factores académicos.
+Lo primero, para las variables numéricas Generamos histogramas y gráficos de densidad para cada una de las variables numéricas, como `Hours_Studied`, `Attendance`, `Exam_Score` y `Previous_Scores`.
+
+```{r}
+plot_histogram_density <- function(data, numeric_vars) {
+  for (var in numeric_vars) {
+    if (!is.numeric(data[[var]])) {
+      stop(paste("La variable", var, "no es numérica."))
+    }
+  }
+  
+  for (var in numeric_vars) {
+    plot <- ggplot(data, aes_string(x = var)) +
+      geom_histogram(aes(y = after_stat(density)), bins = 30, fill = "skyblue", color = "black", alpha = 0.7) +
+      geom_density(alpha = 0.2, fill = "red") +
+      ggtitle(paste("Distribución de", var)) +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5))
+    
+    print(plot)
+  }
+}
+
+numeric_vars <- c("Hours_Studied", "Attendance", "Previous_Scores", "Exam_Score")
+plot_histogram_density(df_recategorize, numeric_vars)
+```
+
+### Relaciones entre variables
+
+En este apartado, exploraremos cómo las variables que conforman los factores institucionales influyen en la calificación final obtenida por los estudiantes.
+Estos factores incluyen variables como la calidad docente (`Teacher_Quality`), si es escuela privada (`School_Type_Private`) y la influencia de los compañeros (`Peer_Influence`).
+Con esto queremos apoyar la hipótesis central de estos factores podrían tener un impacto directo en el rendimiento académico, reflejado en las calificaciones finales de los estudiantes.
+
+Para abordar esta cuestión, utilizaremos **gráficos de violín (violin_plots)** para estudiar la relación de los factores institucionales respecto a la asistencia de los alumnos (`attendance`) ya que estos permiten representar la distribución y densidad de los datos lo que nos facilitará visualizar la distribución de la asistencia de los alumnos en función de diferentes categorías dentro de las variables que representan los factores institucionales.
+
+```{r}
+violin_plot <- function(data, x_var, y_var) {
+  # Asegúrate de que las variables existen en el dataframe
+  if (!(x_var %in% names(data))) {
+    stop(paste("La variable", x_var, "no existe en el dataframe."))
+  }
+  if (!(y_var %in% names(data))) {
+    stop(paste("La variable", y_var, "no existe en el dataframe."))
+  }
+  
+  # Crear el violin plot
+  plot <- ggplot(data, aes_string(x = x_var, y = y_var, fill = x_var)) +
+    geom_violin(trim = FALSE) +
+    ggtitle(paste("Relación entre", x_var, "y", y_var)) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  # Mostrar el gráfico
+  print(plot)
+}
+```
+
+Tambien haremos uso de **gráfico de densidad superpuesto (density plot overlapped)** para estudiar la relación de los factores institucionales respecto a las calificaciones de los alumnos, tanto `previous_Scores` como `Exam_Scores`.
+La superposición de densidades nos va a facilitar la comparación visual entre las diferentes categorías de las variables, ayudándonos a entender si los estudiantes en diferentes contextos (por ejemplo, escuelas privadas versus públicas) tienen patrones de calificación diferentes.
+
+```{r}
+density_plot_overlapped <- function(df, numeric_variable, categorical_variable) {
+  ggplot(df, aes_string(x = numeric_variable, fill = categorical_variable)) +
+    geom_density(alpha = 0.5) +
+    labs(title = paste("Distribución de ", numeric_variable, " respecto ", categorical_variable),
+         x = numeric_variable,
+         y = "Density",
+         fill = categorical_variable) +
+    theme_minimal()
+}
+```
+
+Para estudiar la relacion de los factores institucionales respecto a las horas empleadas al estudio por cada estudiante (`hours_Studied`) vamos a hacer uso de **gráficos de caja (Boxplots)** ya que este tipo de gráfico permite ver la mediana, los cuartiles, y los valores atípicos, lo que nos ayuda a entender cómo varía el tiempo de estudio entre los distintos grupos.
+Además, destacan las diferencias de dispersión y posibles outliers, facilitando la comparación de cómo los estudiantes en distintos contextos manejan sus horas de estudio.
+
+```{r}
+boxplot_hours <- function(df, cat_var) {
+  
+  color_palette <- brewer.pal(min(length(unique(df[[cat_var]])), 9), "Pastel1")  
+  p <- ggplot(df, aes_string(x = cat_var, y = "Hours_Studied", fill = cat_var)) +
+    geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +  # Boxplot con outliers resaltados
+    scale_fill_manual(values = color_palette) +  
+    theme_minimal() +
+    labs(title = paste("Distribución de Horas Estudiadas por", gsub("_", " ", cat_var)),
+         x = gsub("_", " ", cat_var),
+         y = "Horas Estudiadas") +
+    theme(plot.title = element_text(hjust = 0.5))  # Centrar el título
+  
+  # Mostrar el gráfico
+  print(p)
+}
+```
+
+Por último, para estudiar la relación entre los niveles de motivación de los alumnos y los factores institucionales se va a hacer uso de **Barras agrupadas con facetas** debido a que este tipo de gráfico permite comparar fácilmente la distribución de los niveles de motivación dentro de cada categoría del factor institucional.
+Las facetas dividen el gráfico por cada grupo del factor, lo que falicita la comparación entre categorías, mientras que las barras agrupadas muestran todas las proporciones de motivación de manera que también sean faciles de comparar.
+
+```{r}
+grouped_bar_plot_with_facets <- function(data, categoric_var) {
+  data[[categoric_var]] <- as.factor(data[[categoric_var]])
+  data$Motivation_Level <- as.factor(data$Motivation_Level)
+  
+  ggplot(data, aes(x = Motivation_Level, fill = Motivation_Level)) +
+    geom_bar(position = "dodge", color = "black") + 
+    facet_wrap(~ get(categoric_var), scales = "free_y") + 
+    labs(
+      title = paste("Distribución de Motivation_Level según", categoric_var),
+      x = "Nivel de Motivación",
+      y = "Cantidad de Estudiantes"
+    ) +
+    theme_minimal() +
+    theme(
+      strip.text = element_text(size = 12, face = "bold"),  
+      legend.position = "none"  
+    ) +
+    scale_fill_brewer(palette = "Set3")
+}
+```
+
+#### Relación entre Asistencia y factores Institucionales
+
+```{r}
+violin_plot(df_recategorize, "Teacher_Quality", "Attendance")
+violin_plot(df_recategorize, "Peer_Influence", "Attendance")
+violin_plot(df_recategorize, "School_Type_Private", "Attendance")
+```
+
+Podemos observar como no visualizamos grandes cambios respecto a las diferentes categorias dentro de cada una de las variables.
+Esto ya lo habiamos observado en el análisis exploratorio global realizado en el trabajo grupal.
+Sin embargo, la visualización mediante **violin plots** nos permite ver ver aspectos que podrían haber pasado desapercibidos en el análisis previo.
+A continuación, se describen los detalles más relevantes observados en cada uno de los factores institucionales analizados:
+
+Respecto a **Peer_influence**, es interesante destacar el comportamiento de la categoría **High** ya que los bordes del violín no se expanden tanto a lo ancho en esta categoría, lo que indica que la asistencia de los estudiantes es *más homogénea*, es decir, hay menos variabilidad en los porcentajes de asistencia.
+En **Neutral**, la mayor expansión sugiere que los estudiantes presentan una *mayor dispersión en sus porcentajes de asistencia*, lo que refleja diferencias más marcadas dentro de este grupo.
+Finalmente, la categoría **Positive** muestra menos ondulaciones, lo que indica que los estudiantes en este grupo tienen una *asistencia más consistente, con menos fluctuaciones o variabilidad*.
+
+Respecto a **School_Type_Private**, los gráficos para las escuelas privadas (Private) y públicas (Public) muestran *distribuciones muy similares*, lo que indica que no hay una diferencia clara en el porcentaje de asistencia entre ambos grupos.
+Aunque podría esperarse que los estudiantes en escuelas privadas tengan una mayor asistencia debido a la percepción de una educación más exigente, los datos revelan que las distribuciones de asistencia en ambos tipos de escuela son casi idénticas.
+Esto sugiere que, en este caso específico, el tipo de escuela no tiene un impacto notable ni consistente sobre la asistencia de los estudiantes, *desafiando la idea de que las escuelas privadas tendrían una mayor tasa de asistencia debido a su supuesta mayor rigurosidad*.
+
+Por último, en **teacher_quality** se observan *algunas diferencias en la distribución de la asistencia según la calidad del profesor*.
+Para los profesores de **alta calidad**, la densidad de los datos es mayor en los extremos, es decir, en los altos porcentajes de asistencia, lo que sugiere que *hay más estudiantes con asistencia muy alta en este grupo*.
+En cambio, para los profesores de **baja calidad**, la mayor densidad se concentra en los porcentajes más bajos de asistencia, lo que indica que los estudiantes *tienden a asistir menos a las clases*.
+En cuanto a los profesores de **calidad media**, su gráfico tiene más ondulaciones, lo que refleja una *mayor variabilidad en los porcentajes de asistencia*.
+Sin embargo, es importante destacar que, aunque existen estas pequeñas diferencias, los tres gráficos son bastante similares, lo que sugiere que el impacto de la calidad del profesor sobre la asistencia no es tan significativo o claro como podría esperarse.
+
+#### Relación entre calificaciones y factores Institucionales
+
+En este apartado vamos a estudiar tanto calificaciones previas (`Previous_Scores`) como las calificaciones en el exámen final (`Exam_Score`).
+
+```{r}
+density_plot_overlapped(df_recategorize, "Exam_Score", "School_Type_Private")
+density_plot_overlapped(df_recategorize, "Previous_Scores", "School_Type_Private")
+```
+
+Respecto a **School_Type_Private**, observamos que los gráficos de densidad para ambas variables son prácticamente idénticos, sin diferencias significativas.
+Sin embargo, un detalle a destacar es que, en cuanto a las **previous_Scores**, las escuelas públicas presentan una ligera mayor proporción de estudiantes con calificaciones superiores a 9 en comparación con las escuelas privadas.
+
+```{r}
+density_plot_overlapped(df_recategorize, "Exam_Score", "Peer_Influence")
+density_plot_overlapped(df_recategorize, "Previous_Scores", "Peer_Influence")
+```
+
+Respecto a **Peer_Influence**, en `Exam_Score` se observa que una mala influencia de compañeros **(Negative)** tiene un *impacto negativo en las calificaciones*, ya que sus valores se concentran más en los puntajes más bajos en comparación con las categorías Neutral y Positive.
+Por otro lado, Positive muestra una mayor densidad en las calificaciones superiores a 7, lo que sugiere que *una buena influencia de compañeros se asocia con mejores resultados académicos*.
+
+En cuanto a `Previous_Scores`, se observa que la influencia **Positive** tiene una *mayor densidad en las calificaciones bajas*, pero disminuye a medida que aumentan los puntajes.
+Esto podría ser **contraproducente** porque sugiere que una influencia positiva de los compañeros no está favoreciendo a los estudiantes más avanzados o con mejor rendimiento.
+Es posible que los estudiantes con calificaciones más bajas se vean más afectados por sus compañeros, ya sea por falta de motivación o por una falta de apoyo más estructurado, lo que puede dificultar su progreso.
+
+Por otro lado, **Neutral** es la categoría con *mayor densidad en las calificaciones superiores a 9*, lo que indica que una influencia neutral de los compañeros está más asociada con calificaciones muy altas.
+Esto puede ser beneficioso, ya que una influencia menos positiva permite que los estudiantes con buen rendimiento continúen destacándose sin ser influenciados negativamente.
+Sin embargo, la diferencia entre la influencia positiva y neutral podría implicar que un entorno de compañeros demasiado "positivo" podría generar dependencia, lo que afectaría el rendimiento de los estudiantes más avanzados.
+
+Esto podría llevar a la conclusión de que una influencia equilibrada y no excesivamente entusiasta podría ser más eficaz para aquellos con mejores calificaciones, mientras que los estudiantes con calificaciones más bajas podrían necesitar un apoyo más estructurado y menos dependiente.
+
+```{r}
+density_plot_overlapped(df_recategorize, "Exam_Score", "Teacher_Quality")
+density_plot_overlapped(df_recategorize, "Previous_Scores", "Teacher_Quality")
+```
+
+Respecto a **Teacher_Quality**, en `Exam_Score` la densidad de calificaciones bajas es mayor para Low Quality, mientras que para calificaciones altas es ligeramente mayor para High Quality, sugiriendo que *los profesores de alta calidad favorecen mejores resultados en los exámenes*.
+
+En **Previous_Scores**, la *distribución es más variable*, con Medium Quality predominando en las calificaciones bajas y Low Quality en las más altas.
+Esto es curioso, ya que sugiere que los profesores de baja calidad, aunque asociados con calificaciones bajas, parecen influir más en los estudiantes con mejores calificaciones previas, lo que podría indicar que otros factores, como la motivación, también juegan un papel importante.
+
+#### Relación entre Horas estudiadas y factores Institucionales
+
+```{r}
+boxplot_hours(df_recategorize, "Teacher_Quality")  
+boxplot_hours(df_recategorize, "School_Type_Private")  
+boxplot_hours(df_recategorize, "Peer_Influence")  
+```
+
+Al examinar los boxplots, se puede observar que \*la distribución de las horas de estudio de los estudiantes es \*\*casi idéntica para las tres variables que representan los factores institucionales\*.
+Esto sugiere que, independientemente del factor institucional (como el tipo de escuela, la calidad docente, o la influencia de los compañeros), los estudiantes muestran un patrón similar en cuanto a la cantidad de horas dedicadas al estudio.
+
+#### Relación entre Nivel de motivación y factores Institucionales
+
+```{r}
+grouped_bar_plot_with_facets(df_recategorize,"Peer_Influence")
+grouped_bar_plot_with_facets(df_recategorize,"School_Type_Private")
+grouped_bar_plot_with_facets(df_recategorize,"Teacher_Quality")
+```
+
+Respecto a los niveles de motivación de los estudiantes, se observa que las distribuciones son **prácticamente idénticas** para cada una de las categorías de todos los factores institucionales.
+Esto sugiere que, independientemente de las diferencias en los factores institucionales (como el tipo de escuela, la calidad docente o la influencia de los compañeros), los niveles de motivación de los estudiantes no se ven significativamente afectados por estos factores, al menos en los términos que se están analizando.
+
+#### Conclusiones Análisis exploratorio
+
+Una vez finalizado el análisis exploratorio vamos a resumir las principales conclusiones de este apartado:
+
+-   **Los resultados muestran que no se observa un impacto notable de los factores institucionales en el rendimiento académico**, ya que las distribuciones de las variables no muestran diferencias significativas entre las categorías de estos factores.
+
+-   En cuanto a la **asistencia**, los factores institucionales no presentan variaciones claras entre sus categorías.
+    Aunque algunos comportamientos interesantes fueron observados, como la asistencia más homogénea en la categoría "High" de Peer_Influence, las diferencias no son lo suficientemente marcadas como para sugerir que estos factores influyen de manera decisiva en la asistencia.
+
+-   En relación con las **calificaciones** y **horas de estudio**, no se identificaron patrones evidentes que indiquen que el tipo de escuela o la calidad del profesor afecten significativamente a las calificaciones finales o a las horas dedicadas al estudio.
+    Además, los niveles de motivación no parecen variar de manera destacada entre los distintos grupos de factores institucionales.
+
+En resumen, aunque algunos detalles puntuales fueron observados, no se detectaron impactos sustanciales de los factores institucionales en las variables analizadas.
+
+#### Gráfico de red
+
+Antes de comenzar con el apartado de modelado predictivo, se va a generar un **gráfico de red** con el objetivo de visualizar las relaciones entre las variables categóricas (como la calidad del profesor, tipo de escuela e influencia de los compañeros) y la calificación final (Exam_Score).
+Este análisis preliminar permite identificar un resumen general de las correlaciones entre las variables.
+
+```{r}
+# Crear una matriz de correlación entre las variables
+set.seed(123)
+
+cor_matrix <- cor(df_cleaned[, c("Exam_Score", "Teacher_Quality", "School_Type_Private", "Peer_Influence")], use = "complete.obs")
+
+# Crear un gráfico de red a partir de la matriz de correlación
+graph <- graph_from_adjacency_matrix(cor_matrix, mode = "undirected", weighted = TRUE, diag = FALSE)
+
+# Dibuja el gráfico de red
+plot(graph, vertex.size = 30, vertex.label.cex = 0.8, edge.width = E(graph)$weight * 5, 
+     main = "Diagrama de Red: Factores Institucionales y Horas Estudiadas/Motivación")
+
+```
+
+El gráfico muestra que todas las variables relacionadas con los factores institucionales, como `Teacher_Quality`, `School_Type_Private` y `Peer_Influence`, están correlacionadas con la variable objetivo **Exam_Score**, lo que refuerza la idea de que puede que el entorno escolar influye en el rendimiento académico.
+Además, destaca una correlación interesante entre *School_Type_Private* y *Teacher_Quality*, lo que sugiere que *las escuelas privadas podrían tener una mayor calidad de profesorado, lo que a su vez impacta en las calificaciones*.
+Estos hallazgos serán clave para el modelado predictivo, ya que podrían indicar relaciones indirectas entre variables que necesitan ser consideradas.
+
+## 2.Modelado Predictivo del Rendimiento Académico
+
+Una vez hemos realizado un análisis de las relaciones entre los factores institucionales y el desempeño estudiantil, se va a realizar un modelo de predicción para estimar la calificación final de los alumnos en función de las variables relacionadas con los factores institucionales.
+El objetivo es usar estas variables para predecir el rendimiento académico final de los estudiantes, representado por la variable `Exam_Score`.
+
+### Regresión lineal múltiple
+
+Para ello, se utilizará **regresión lineal múltiple**, que es una técnica estadística utilizada para modelar la relación entre una variable dependiente y varias variables independientes.
+En este caso, la **variable dependiente** será `Exam_Score` (la calificación final de los estudiantes), mientras que **las variables independientes serán los factores institucionales** como calidad del profesorado, tipo de escuela y la influencia de los compañeros.
+
+Empleando esta técnica el objetivo es lograr identificar qué tan fuertemente cada uno de estos factores influye en el rendimiento académico, así como también proporcionará una **fórmula matemática** que podrá ser utilizada para predecir las calificaciones futuras de los estudiantes, basándose en las características de su entorno institucional.
+
+**Especificación del modelo**
+
+El modelo que se va a usar para la predicción de la calificación final de los estudiantes es el siguiente:
+
+Exam_Score = B0 + B1 x `Teacher_Quality` + B2 x`School_Type_Private` + B3 x`Peer_Influence` + e
+
+donde
+
+-   B0 es el intercepto o término constante.
+
+-   B1,...B3 son los coeficientes que indican la influencia en cada variable predictora de la calificación final.
+
+-   e es el término de error, que captura la variabilidad no explicada por las variables predictoras.
+
+En este bloque entrenamos un modelo de regresión lineal utilizando las variables `Teacher_Quality`, `School_Type_Private` y `Peer_Influence` para predecir la variable dependiente **Exam_Score**.
+Luego, mostramos un resumen del modelo para observar los coeficientes y la significancia de las variables.
+
+```{r}
+model <- lm(Exam_Score ~ Teacher_Quality + School_Type_Private + Peer_Influence, data = df_cleaned)
+
+# Ver el resumen del modelo
+summary(model)
+```
+
+A continuación, realizamos las predicciones utilizando el modelo ajustado sobre los datos de entrenamiento y calculamos las métricas de rendimiento, como el R² y el RMSE, para evaluar la capacidad predictiva del modelo.
+
+```{r}
+# Evaluación del modelo
+# Predicciones en los datos de entrenamiento
+predictions <- predict(model, df_cleaned)
+
+# Cálculo de las métricas de rendimiento (R2 y RMSE)
+actuals <- df_cleaned$Exam_Score
+residuals <- actuals - predictions
+
+# R-cuadrado (R2)
+r_squared <- summary(model)$r.squared
+cat("R-squared:", r_squared, "\n")
+
+# Error cuadrático medio (RMSE)
+rmse <- sqrt(mean(residuals^2))
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+```
+
+Para poder observar de forma gráfica las predicciones del modelo en comparación con los valores reales de la calificación vamos a crear un **diagrama de dispersión (scatter plot)**, en el cual comparamos las predicciones generadas por el modelo con los valores reales de la calificación final.
+
+```{r}
+# Visualizar las predicciones vs. los valores reales
+ggplot(df_cleaned, aes(x = actuals, y = predictions)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Predicciones vs. Valores Reales",
+       x = "Valores Reales de la Calificación Final",
+       y = "Predicciones del Modelo")
+```
+
+Observamos como R2 nos da **0.0157**.
+Esto indica que solo el 1.57% de la variabilidad de las calificaciones finales (Exam_Score) está explicada por las variables Teacher_Quality, School_Type_Private y Peer_Influence.
+Esto sugiere que **el modelo no es muy bueno para predecir las calificaciones**, ya que la mayoría de la variabilidad queda sin explicar.
+Respecto a R2 ajustado, nos da **0.01524**, que es muy similar al R², lo que indica que el modelo tiene poco poder predictivo.
+
+-   Respecto al significado de las variables, `Teacher_Quality` y `Peer_Influence` son estadísticamente significativas (p \< 0.05), lo que significa que tienen un **impacto significativo en la calificación final**.
+    `School_Type_Private` no es significativa (p = 0.391), lo que sugiere que el tipo de escuela (pública o privada) no tiene un impacto relevante en las calificaciones.
+
+-   RMSE da un resultado de **3.88**.
+    Este es el error promedio entre las predicciones y los valores reales.
+    Un RMSE más bajo indica un mejor ajuste, pero en este caso el valor es algo alto lo que sugiere que el modelo no es muy preciso.
+
+-   MAE (Mean Absolute Error) da un resultado de 2.83.
+    Este es el error absoluto promedio entre las predicciones y los valores reales.
+    Un MAE más bajo indica una mejor precisión.
+
+**Conclusiones generales de Regresión lineal**
+
+El modelo presenta un **bajo poder predictivo** debido a que tiene un **valor bajo de R²**, lo que significa que las variables seleccionadas no logran explicar adecuadamente la variabilidad de las calificaciones finales.
+Esto era de suponer debido a que la matriz de dispersión indicaba una poca correlación con la variable `Exam_Score` por lo que estas variables son insuficientes para predecir la calificación final del estudiante.
+Aunque las variables `Teacher_Quality` y `Peer_Influence` son significativas, lo que indica que influyen de manera importante en las calificaciones, la variable `School_Type_Private` no tiene un impacto significativo en el modelo.
+Además, el ajuste del modelo no es óptimo, ya que tanto el RMSE (Root Mean Squared Error) como el MAE (Mean Absolute Error) muestran que el modelo tiene un error relativamente alto, sugiriendo que hay espacio para mejorar su rendimiento y precisión.
+
+### Gradient Boosting Machines (GBM)
+
+Viendo que los resultados obtenidos en la regresión lineal múltiple han sido pobres, se va a optar por explorar un modelo más complejo y poderoso como **Gradient Boosting Machines (GBM)**, que generalmente ofrece una mayor capacidad predictiva al construir modelos basados en árboles de decisión de manera iterativa.
+
+De este modo, una vez realizado el proceso podremos comparar los resultados obtenidos con los del modelo de regresión lineal para ver si hay una mejora en el rendimiento.
+
+El primer paso es ajustar el modelo de Gradient Boosting Machine (GBM).
+Para ello vamos a realizar **validación cruzada (Cross Validation)** con k = 10, lo que ayuda a garantizar que el modelo sea robusto y no se sobreajuste a los datos.
+También se va a mostrar la importancia de las variables utilizadas en el modelo que en nuestro caso son aquellas correspondientes a los factores institucionales (`Teacher_Quality`, `Peer_Influence` y `School_Type_Private`).
+
+Esto nos va a proporcionar información sobre el impacto de cada variable en la predicción de la calificación final (Exam_Score) de un modo más claro a como se nos proporcionaba en la regresión múltiple.
+
+```{r}
+train_control <- trainControl(method = "cv", number = 10)
+
+gbm_model <- train(Exam_Score ~ Teacher_Quality + School_Type_Private + Peer_Influence,
+                   data = df_cleaned, 
+                   method = "gbm", 
+                   trControl = train_control,
+                   verbose = FALSE)
+
+summary(gbm_model)
+```
+
+Si observamos el resultado podemos ver como `Peer_Influence` es la variable con mayor importancia relativa en el modelo con un **54.83**.
+Seguido de Peer_Influence, `Teacher_Quality` también tiene una importancia significativa de **37.53** en el modelo, un poco menor que Peer_Influence.
+Sin embargo, `School_Type_PrivateYes` que refleja si el estudiante pertenece a un colegio privado o no tiene una importancia mucho menor **(7.64)** lo que confirma que el tipo de escuela no tiene un impacto tan grande en la predicción de las calificaciones finales.
+
+Una vez hemos realizado el ajuste del modelo, vamos a realizar las predicciones sobre los datos y al igual que en el apartado de regresión multiple se van a calcular métricas como RMSE y el R² para evaluar la calidad del modelo.
+
+```{r}
+# Predicciones en el conjunto de datos
+gbm_predictions <- predict(gbm_model, df_cleaned)
+
+# Calcular el error cuadrático medio (RMSE)
+gbm_residuals <- df_cleaned$Exam_Score - gbm_predictions
+gbm_rmse <- sqrt(mean(gbm_residuals^2))
+cat("RMSE del modelo GBM:", gbm_rmse, "\n")
+
+# Calcular R-cuadrado (R²)
+gbm_r_squared <- 1 - sum(gbm_residuals^2) / sum((mean(df_cleaned$Exam_Score) - df_cleaned$Exam_Score)^2)
+cat("R-cuadrado del modelo GBM:", gbm_r_squared, "\n")
+
+```
+
+Observando los resultados, podemos ver que hemos obtenido **prácticamente los mismos valores de RMSE y R²** que en el apartado anterior.
+Aunque el modelo GBM es más avanzado, los resultados siguen sugiriendo un **bajo poder predictivo**.
+Como se mencionó antes, **R² es muy bajo (0.0158)**, lo que refleja que las variables utilizadas no explican adecuadamente la variabilidad de las calificaciones finales.
+Esto,**junto con un RMSE relativamente alto (3.88) y un MAE de 2.83**, indica que el modelo aún tiene un margen significativo para mejorar en términos de precisión y capacidad predictiva.
+
+Por último, vamos a generar un **Lollipop plot** que muestra la **importancia de los factores institucionales** que han sido utilizados como variables en el modelo Gradient Boosting Machine (GBM).
+
+```{r}
+# Importancia de las variables
+var_imp <- varImp(gbm_model, scale = FALSE)
+
+# Visualizar la importancia de las variables
+plot(var_imp)
+
+```
+
+### Conclusiones generales
+
+En este apartado de Modelado Predictivo del Rendimiento Académico donde se han utilizado dos enfoques de modelado para predecir las calificaciones finales de los estudiantes basándose en factores institucionales se han podido extraer una serie de conclusiones que resumo en los siguientes puntos:
+
+-   **Bajo poder predictivo de los modelos**: Ambos modelos, tanto el de regresión lineal como el GBM, han mostrado un **bajo poder predictivo**, con valores de **R² muy bajos (aproximadamente 0.015)**.
+    Esto nos ha indicado que las variables utilizadas en el modelo, las cuales han sido los factores institucionales, no han sido capaces de explicar adecuadamente la variabilidad de las calificaciones.
+
+-   **Confirmación del bajo impacto de los factores institucionales**: En el análisis exploratorio previo, ya se podía observar en las gráficas y en la matriz de correlación que las variables seleccionadas (como la calidad de los docentes, el tipo de colegio y la influencia de los compañeros) no tenían una **relación significativa con el rendimiento académico de los estudiantes**.
+    Estas observaciones iniciales se han confirmado en el apartado de modelado predictivo, donde los modelos no han logrado predecir de manera efectiva las calificaciones finales.
+    Así, se ha llegado a la conclusión de que los factores institucionales, como la calidad de los docentes, el tipo de colegio (privado o público) y la influencia de los compañeros, no tienen un impacto significativo en el rendimiento académico de los estudiantes.
+
+-   Sin embargo, el modelado predictivo ha mostrado que aunque los factores institucionales no tengan un gran peso en el rendimiento académico dentro de esos factores existen factores que tienen mas influencia que otros.
+    En este caso, la **influencia de los compañeros** era el factor institucional con mayor importancia, por encima de la calidad del profesorado.
+    También nos ha permitido observar que el **tipo de colegio** al que asisten ya sea pùblico o privado es el que **menor peso tiene dentro de los factores institucionales**.
+
+En resumen, estas conclusiones nos sugieren que existen **otros factores** más allá de los institucionales que podrían influir de manera significativa en el rendimiento académico de los estudiantes.
+Es probable que aspectos personales y sociales, como la motivación individual, el apoyo familiar o las estrategias de estudio utilizadas por cada estudiante, jueguen un papel mucho más determinante en el rendimiento académico de los estudiantes.
+
+#PREGUNTA 2.
+Análisis de Patrones en la Actividad Física de Estudiantes mediante Reglas de Asociación
+
+El equilibrio entre estudio y actividad física es fundamental para el rendimiento académico y la salud de los estudiantes.
+Diversos estudios han demostrado que el ejercicio contribuye a mejorar la concentración, reducir el estrés y aumentar el bienestar emocional.
+Un ejemplo es el estudio realizado por la **Universidad de Jaén**, publicado en la Revista INFAD de Psicología, que encontró una *relación positiva entre la actividad física moderada a vigorosa y el desempeño académico en educación física*, aunque no en otras materias.
+Sin embargo, en un mundo donde la competencia académica es cada vez mayor, muchos estudiantes podrían estar *priorizando el estudio en detrimento de su salud física*.
+Por ejemplo, en mi caso personal, tuve que abandonar practicar fútbol para enfocarme en mis estudios de bachillerato para así obtener mejores calificaciones.
+
+Este estudio busca analizar la relación entre el tiempo dedicado al estudio y la actividad física en estudiantes, considerando factores como la asistencia a clases, la participación en actividades extraescolares, el género y la distancia de casa a la escuela.
+La pregunta clave es si los estudiantes que más estudian o tienen mayor compromiso académico sacrifican su tiempo de ejercicio físico, lo que podría afectar su bienestar general.
+
+Para ello, se van a responder a las siguientes preguntas:
+
+-   **¿Qué factores son aquellos que afectan más en la cantidad de ejercicio físico realizado por el estudiante?**
+-   **¿Existe una correlación entre el rendimiento académico y la cantidad de actividad física realizada?**
+-   **¿El género o la distancia de la escuela a casa juegan un papel importante en el equilibrio entre el estudio y la actividad física?**
+
+Para abordar esta serie de cuestiones, se aplicarán diversas técnicas de análisis de datos.
+En primer lugar, se utilizarán gráficos descriptivos, como boxplots, para observar la distribución de la actividad física en función de diferentes factores categóricos.
+Posteriormente, se emplearán técnicas de modelado predictivo para investigar este apartado más a fondo.
+
+En particular, se utilizarán **reglas de asociación** para identificar patrones en los datos entre las variables categóricas y el tiempo de actividad física.
+Esta técnica permitirán estudiar no solo las relaciones directas, sino también las interacciones entre diferentes factores que podrían afectar el comportamiento de los estudiantes respecto a su actividad física.
+
+### Análisis exploratorio
+
+#### Distribución de horas de ejercicio físico
+
+Lo primero es comenzar con un análisis básico de la distribución de la variable objetivo `Physical_Activity`, que representa el número medio de horas de actividad física que realiza un estudiante por semana.
+
+```{r}
+summary(data$Physical_Activity)
+```
+
+El resumen estadístico de la variable `Physical_Activity` muestra que la mayoría de los estudiantes realiza una **cantidad moderada de actividad física**, con una media de aproximadamente *2.97 horas por semana y una mediana de 3 horas*.
+La distribución de los datos sugiere que **el 75% de los estudiantes realiza 4 horas o menos de ejercicio físico**, con un **máximo de 6 horas semanales**.
+Esto indica que, en general, *los estudiantes no dedican muchas horas a la actividad física, lo que podría estar relacionado con la carga académica u otras responsabilidades*.
+
+```{r}
+create_histograms <- function(data, variables, binwidth = 1, fill_color = "skyblue", title = "Distribución de las Variables") {
+  for (var in variables) {
+    p <- ggplot(data, aes_string(x = var)) +
+      geom_histogram(binwidth = binwidth, fill = fill_color, color = "black", alpha = 0.7) +
+      labs(title = paste(title, "-", var), 
+           x = paste("Distribución de", var), 
+           y = "Frecuencia") +
+      theme_minimal()
+    
+    print(p)
+  }
 }
 
 
-missing_data <- detect_missing_data(data)
-missing_data
+create_histograms(data,"Physical_Activity")
 ```
 
-En el resultado arrojado por la función podemos observar que no existen valores **NA** en las columnas de nuestro dataframe, lo que significa que no hay datos explícitamente faltantes o nulos. Sin embargo, también notamos que hay filas con **valores vacíos** en ciertas variables categóricas.
+Observando el histograma, se puede apreciar que las horas de actividad física semanales siguen una distribución normal, con una concentración de datos en torno a un valor central y una caída progresiva hacia los extremos donde observamos que la gran mayoría de alumnos se encuentran en torno a las **3 Horas semanales de ejercicio físico**.
 
-Al sumar el total de valores faltantes podemos observar que puede haber un máximo de **235 filas** con algún valor faltante. Esto supone aproximadamente el **3.56%** del total de filas del conjunto de datos.
+#### Distribución de variables académicas
 
-Dado que la proporción de filas con valores faltantes es relativamente baja, consideramos eliminar estas instancias ya que creemos que no tendrá un impacto significativo en la integridad general del dataset.
+Debido a que posteriormente debemos realizar una categorización de las variables para dividirlas en rangos antes de realizar las reglas de asociación va a ser necesario visualizar la **distribución de variables académicas**.
+Esto va a ayudar a definir los puntos de corte más apropiados para las categorías que vamos a crear.
 
 ```{r}
-clean_missing_data <- function(df) {
-  original_row_count <- nrow(df)
-  
-  df <- df[!apply(df, 1, function(x) any(is.na(x) | x == "")), ] #Borramos las filas
-  
-  cleaned_row_count <- nrow(df)
-  rows_removed <- original_row_count - cleaned_row_count
-  cat("Número de filas eliminadas:", rows_removed, "\n")
-  
-  return(df)
-}
-
-data <- clean_missing_data(data)
+academic_vars <- c("Previous_Scores", "Exam_Score", "Attendance", "Hours_Studied", "Tutoring_Sessions")
 ```
 
-Observamos que se han eliminado 229 filas por lo que el dataset sin ningún valor de faltante constaría de un total de **6378 filas**.
+```{r}
+summary_academic_vars <- function(data, vars) {
+  summary_data <- data[, vars]
+  summary(summary_data) 
+}
+
+summary_academic_vars(data, academic_vars)
+```
+
+```{r}
+create_histograms(data, academic_vars)
+```
+
+A partir tanto de la información de summary como de la distribución de cada una de las variables académicas vamos a realizar la posterior codificación de los datos de este modo:
+
+-   `Exam_Score` y `Previous_Score`: El rango de calificaciones va de 0 a 100.
+    Por lo que podremos seguir el método de agrupación de calificaciones seguido en España donde entre 5 y 5.9 es aprobado, entre 6 y 6.9 es Bien, entre 7 y 8.9 es notable y entre 9 y 10 es sobresaliente.
+
+-   `Attendance`: El mínimo es 60 y dado que la mayoría de los estudiantes parecen tener un 80% de asistencia en promedio, podría ser más apropiado ajustar los límites: **Baja** (Menos de 60%), **Media** (De 60% a 75%) y **Alta** (75% o más).
+
+-   `Hours_Studied`: Vamos a ajustarlo a 5 rangos específicos: **Pocas horas (0 - 5 horas)**, **Horas moderadas (6-15)**, **Horas razonables (16-30 horas)**, **Horas excesivas (31-40 horas)** y **excesivas (Más de 40 horas)**.
+
+-   `Tutoring_Sessions`: Vamos a ajustarlo a 3 rangos donde los que tengan 0 de horas de tutoria serán **Sin tutoria**, entre 1 y 3 serán **Pocas tutorias** y mayor a 3 serán **muchas tutorias**.
+
+### Relaciones entre variables académicas
+
+A continuación, exploraremos las relaciones entre la actividad física de los estudiantes y las diversas variables académicas tanto numericas como las categorizadas. Para esto, utilizaremos técnicas de visualización y análisis descriptivo, buscando posibles patrones o tendencias que puedan ser relevantes para responder a las preguntas planteadas que servirán como análisis previo a las reglas de asociación.
+
+#### Relación entre actividad física y calificaciones junto con asistencia
+
+Una de las principales cuestiones que se busca analizar en este estudio es si existe alguna correlación o relación entre el rendimiento académico y la cantidad de actividad física realizada. Para esto se va a hacer uso de **diagramas de dispersión** para observar cómo se distribuye la actividad física en relación con las categorías de rendimiento académico (como `Exam_Score` y `Previous_Scores`).
+
+```{r}
+create_scatter_plot <- function(df, var_x, var_y) {
+  ggplot(df, aes_string(x = var_x, y = var_y, color = var_y)) +  
+    geom_point(alpha = 0.7, size = 3) +  
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  
+    scale_color_viridis_c(option = "magma") +  
+    labs(title = paste("Relación entre", var_x, "y", var_y),
+         x = var_x, y = var_y, color = var_y) +
+    theme_minimal()
+}
+```
+
+```{r}
+create_scatter_plot(data, "Physical_Activity", "Exam_Score")
+create_scatter_plot(data, "Physical_Activity", "Previous_Scores")
+create_scatter_plot(data, "Physical_Activity", "Attendance")
+```
+Observamos que la distribución de calificaciones para calificaciones (`Exam_Score` y `Previous_Scores`) como para asistencia (`Attendance`) es similar para cada una de las horas de actividad física realizadas por los estudiantes, notamos que estas distribuciones son bastante similares entre los diferentes grupos de horas de actividad física. Es decir, al encontrarse una distribución tan amplia de calificaciones y asistencia en cada una de las horas de actividad física no se permiten observar diferencias significativas.
 
 
-Debido a que nuestro estudio se centra unicamente en los factores institucionales
+#### Relación entre horas actividad física y horas de estudio junto con sesiones de tutoría
 
+Para analizar cómo se distribuye la actividad física en relación con las horas de estudio y las sesiones de tutoría, utilizaremos un **diagrama de densidad 2D (Contour Plot)**, el cual permite visualizar las áreas de mayor concentración de datos.
+
+```{r}
+create_density_plot <- function(data, x, y) {
+  ggplot(data, aes(x = .data[[x]], y = .data[[y]])) +
+    geom_density2d(color = "blue") +
+    geom_point(alpha = 0.5, color = "darkred") +  
+    labs(title = paste("Densidad de la Relación entre", x, "y", y),
+         x = x,
+         y = y) +
+    theme_minimal()
+}
+
+create_density_plot(data, "Physical_Activity", "Hours_Studied")
+create_density_plot(data, "Physical_Activity", "Tutoring_Sessions")
+```
+Las horas de estudio y las sesiones de tutoría varían considerablemente, sin depender directamente de las horas de actividad física. Las densidades muestran que la mayor concentración de horas de estudio ocurre con 3 horas de actividad física, lo cual coincide con la cantidad más común observada en el histograma. En cuanto a las sesiones de tutoría, la mayor concentración se encuentra en los estudiantes que realizan 3 horas de actividad física y asisten a 1 o 2 sesiones de tutoría. Esto puede llegar a sugerir que aquellos que equilibran el tiempo de actividad física y tutorías pueden lograr gestionar mejor su tiempo.
+
+### Preprocesamiento de los datos
+
+**Filtrar las columnas relevantes**
+
+Lo primero que debemos hacer es que como en el proceso de buscar de asociaciones nos centraremos unicamente en las variables académicas y las horas de actividad física, debemos eliminar todas aquellas columnas irrelevantes para este análisis.
+
+Esto nos permitirá concentrarnos únicamente en las variables relacionadas con los **aspectos académicos y la actividad física**.
+En este caso, seleccionaremos las variables relacionadas con el rendimiento académico: `Previous_Scores`, `Exam_Score`, `Attendance`, `Tutoring_Sessions` y `Hours_Studied` ya que como observamos en la matriz de correlación del trabajo grupal son las que se encuentran directamente relacionadas con el rendimiento académico del estudiante.
+
+```{r}
+df_association_data <- data[, c(academic_vars, "Physical_Activity")]
+
+head(df_association_data)
+```
+
+**Codificación de variables**
+
+Para ver la distribución de la actividad física de los estudiantes vamos a agrupar las horas de actividad física en los en **rangos de horas**.
+De esta manera, podemos observar cómo se distribuyen los estudiantes, desde aquellos que no realizan actividad física durante la semana hasta aquellos que practican más horas.
+
+```{r}
+df_association_data <- df_association_data %>%
+  mutate(
+    Physical_Activity = case_when(
+      Physical_Activity == 0 ~ "0 Horas",
+      Physical_Activity == 1 ~ "1 Hora",
+      Physical_Activity == 2 ~ "2 Horas",
+      Physical_Activity == 3 ~ "3 Horas",
+      Physical_Activity == 4 ~ "4 Horas",
+      Physical_Activity == 5 ~ "5 Horas",
+      Physical_Activity > 5 ~ "6 Horas",
+      TRUE ~ "Fuera de Rango"
+    ),
+    # Convertir la columna 'Physical_Activity' a factor
+    Physical_Activity = factor(Physical_Activity, 
+                                levels = c("0 Horas", "1 Hora", "2 Horas", "3 Horas", "4 Horas", "5 Horas", "6 Horas", "Fuera de Rango"))
+  )
+
+
+
+head(df_association_data)
+```
+
+A la hora de realizar las reglas de asociación, todas las variables filtradas anteriormente deben ser categóricas.
+Esto incluye tanto las calificaciones (`Exam_Score` y `Previous_Score`) como otras variables relevantes como la asistencia (`Attendance`), las horas de estudio (`Hours_Studied`), y las sesiones de tutoría (`Tutoring_Sessions`).
+De este modo, las asociaciones y patrones que encontremos posteriormente mediante reglas de asociación serán más claros y fáciles de interpretar a la hora de extraer conclusiones.
+
+Por tanto, vamos a seguir estos pasos para categorizar las variables académicas y prepararlas para el análisis:
+
+1.  **Categorizar las calificaciones** en rangos de puntuación (**"Aprobado","Bien","Notable","Sobresaliente"**).
+
+2.  **Categorizar la asistencia** en diferentes grupos, por ejemplo, "**Baja", "Media" y "Alta"**.
+
+3.  **Categorizar las horas de estudio** en cinco rangos: **"Pocas horas"** (0-5), **"Horas moderadas"** (6-15), **"Horas razonables"** (16-30), **"Horas intensivas"** (31-40), **"Excesivas"** (+40).
+
+4.  **Categorizar las sesiones de tutoría** en grupos como **"Sin sesiones", "Pocas sesiones" y "Muchas sesiones"**.
+
+```{r}
+df_association_data <- df_association_data %>%
+  mutate(
+    # Categorizar el puntaje del examen directamente en la columna 'Exam_Score'
+    Exam_Score = case_when(
+      Exam_Score >= 50 & Exam_Score <= 69 ~ "Aprobado",
+      Exam_Score >= 70 & Exam_Score <= 79 ~ "Bien",
+      Exam_Score >= 80 & Exam_Score <= 89 ~ "Notable",
+      Exam_Score >= 90 ~ "Sobresaliente",
+      TRUE ~ "Fuera de Rango"  # En caso de valores fuera del rango
+    ),
+    
+    # Categorizar las calificaciones anteriores ('Previous_Scores')
+    Previous_Scores = case_when(
+      Previous_Scores >= 50 & Previous_Scores <= 69 ~ "Aprobado",
+      Previous_Scores >= 70 & Previous_Scores <= 79 ~ "Bien",
+      Previous_Scores >= 80 & Previous_Scores <= 89 ~ "Notable",
+      Previous_Scores >= 90 ~ "Sobresaliente",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    # Categorizar la asistencia ('Attendance')
+    Attendance = case_when(
+      Attendance < 60 ~ "Baja",  # Ajustado a un límite más realista
+      Attendance >= 60 & Attendance < 75 ~ "Media",
+      Attendance >= 75 ~ "Alta",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    # Categorizar las horas de estudio ('Hours_Studied') en los rangos especificados
+    Hours_Studied = case_when(
+      Hours_Studied >= 0 & Hours_Studied <= 5 ~ "Pocas horas",
+      Hours_Studied >= 6 & Hours_Studied <= 15 ~ "Horas moderadas",
+      Hours_Studied >= 16 & Hours_Studied <= 30 ~ "Horas razonables",
+      Hours_Studied >= 31 & Hours_Studied <= 40 ~ "Horas intensivas",
+      Hours_Studied > 40 ~ "Excesivas",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    # Categorizar las sesiones de tutoría ('Tutoring_Sessions')
+    Tutoring_Sessions = case_when(
+      Tutoring_Sessions == 0 ~ "Sin tutoría",
+      Tutoring_Sessions >= 1 & Tutoring_Sessions <= 3 ~ "Pocas sesiones",
+      Tutoring_Sessions > 3 ~ "Muchas sesiones",
+      TRUE ~ "Fuera de Rango"
+    )
+  ) %>%
+  mutate(
+    # Convertir las columnas categóricas a factores
+    Exam_Score = factor(Exam_Score, levels = c("Aprobado", "Bien", "Notable", "Sobresaliente", "Fuera de Rango")),
+    Previous_Scores = factor(Previous_Scores, levels = c("Aprobado", "Bien", "Notable", "Sobresaliente", "Fuera de Rango")),
+    Attendance = factor(Attendance, levels = c("Baja", "Media", "Alta", "Fuera de Rango")),
+    Hours_Studied = factor(Hours_Studied, levels = c("Pocas horas", "Horas moderadas", "Horas razonables", "Horas intensivas", "Excesivas", "Fuera de Rango")),
+    Tutoring_Sessions = factor(Tutoring_Sessions, levels = c("Sin tutoría", "Pocas sesiones", "Muchas sesiones", "Fuera de Rango"))
+  )
+
+
+head(df_association_data)
+str(df_association_data)
+```
+
+## Modelado predictivo
+
+En el análisis exploratorio previo, al examinar las relaciones entre diversas variables, no se observó una influencia clara de algunas características, como las actividades extraescolares, el género y la distancia entre la escuela y hogar, en la actividad física de los estudiantes.
+Además, se encontró que la distribución de horas de ejercicio físico en relación con las calificaciones previas no presentaba una variación significativa entre las diferentes categorías de notas.
+Esto sugiere que, en este caso, las variables consideradas no ofrecen una explicación contundente sobre las horas de ejercicio realizadas por los estudiantes.
+
+Dado que no se han encontrado relaciones directas claras en estos análisis iniciales, vamos a profundizar en el estudio de estas relaciones utilizando **reglas de asociación**.
+
+Las **reglas de asociación**, nos van a permitir *identificar numerosas asociaciones frecuentes entre diferentes factores dentro de los datos*, lo que puede ayudarnos a descubrir relaciones ocultas que no se habían evidenciado en el análisis exploratorio inicial.
+
+
+#### Reglas de asociación
+
+Como se ha destacado anteriormente, las reglas de asociación son una técnica utilizada para identificar patrones y relaciones interesantes entre variables dentro de los conjuntos de datos.
+En este caso, nos centraremos en identificar asociaciones entre las variables académicas y la actividad física de los estudiantes.
+De este modo, podremos observar si en verdad la actividad académica del estudiante influye en el tiempo que desempeña en realizar actividad física.
+
+Para realizar este análisis, utilizaremos el **algoritmo Apriori**, que permite descubrir qué combinaciones de variables ocurren frecuentemente juntas dentro de nuestro dataset.
+
+Para ello lo primero que tenemos que hacer en convertir el dataframe a un **formato de transacciones** donde cada fila del dataset se considera como una **transacción**, y cada columna representa un **ítem**.
+Este formato es el requerido por el algoritmo Apriori.
+
+```{r}
+df_association_data
+```
+
+```{r}
+df_transactions <- df_association_data %>%
+  select(Exam_Score, Previous_Scores, Attendance, Hours_Studied, Tutoring_Sessions, Physical_Activity) %>%
+  as("transactions")
+```
+
+A continuación, obtenemos las reglas mediante la aplicación de algoritmo donde establecemos los umbrales mínimos de soporte (0.01) y confianza de las reglas (0.5).
+Esto quiere decir que estamos buscando reglas que ocurran al menos en el 1% de las transacciones y que tengan al menos un 50% de confianza, es decir, significa que si el antecedente de la regla ocurre, al menos el 50% de las veces el consecuente también ocurrirá.
+
+```{r}
+rules <- apriori(df_transactions, 
+                 parameter = list(support = 0.01, confidence = 0.5, minlen = 2, target = "rules"))
+
+inspect(rules)
+```
+
+Hemos obtenido un total de **1574 Reglas**.
+Sin embargo, dado que estamos interesados en las asociaciones que involucren las horas de actividad física (`Physical_Activity`), vamos a filtrar las reglas generadas para mostrar solo aquellas que estén directamente relacionadas con esta variable.
+
+```{r}
+# Filtrar las reglas cuyo consecuente contiene cualquier valor de 'Physical_Activity'
+physical_activity_rules <- apriori(df_transactions, 
+                 parameter = list(support = 0.01, confidence = 0.5, minlen = 2),
+                 appearance = list(rhs = c("Physical_Activity=0 Horas", "Physical_Activity=1 Hora", "Physical_Activity=2 Horas", 
+                                           "Physical_Activity=3 Horas", "Physical_Activity=4 Horas", "Physical_Activity=5 Horas",
+                                           "Physical_Activity=6 Horas", "Physical_Activity=Fuera de Rango"), 
+                                   default = "lhs"))
+
+inspect(physical_activity_rules)
+```
+
+Observamos que no se encontraron reglas en las que `Physical_Activity` aparezca en el consecuente.
+Por ello, será necesario **reducir el valor de confianza de 0.5 a un umbral más bajo**, permitiendo la generación de reglas menos restrictivas.
+Esto aumentará la cantidad de asociaciones detectadas y podría revelar patrones que antes no eran visibles.
+Sin embargo, a su vez esto va a reducir las restricciones, es decir, se relaja la exigencia de cuanto de fuerte debe ser la relación entre el antecedente y el consecuente para ser considerada una regla interesante.
+
+Por tanto, ahora vamos a probar con un **confidence = 0.3**.
+
+**Reglas de asociación con confidence = 0.3**
+
+```{r}
+# Filtrar las reglas con confidence 0.3
+physical_activity_rules_03 <- apriori(df_transactions, 
+                 parameter = list(support = 0.01, confidence = 0.3, minlen = 2),
+                 appearance = list(rhs = c("Physical_Activity=0 Horas", "Physical_Activity=1 Hora", "Physical_Activity=2 Horas", 
+                                           "Physical_Activity=3 Horas", "Physical_Activity=4 Horas", "Physical_Activity=5 Horas",
+                                           "Physical_Activity=6 Horas", "Physical_Activity=Fuera de Rango"), 
+                                   default = "lhs"))
+
+
+
+inspect(physical_activity_rules_03)
+```
+
+Después de reducir el umbral de confianza, se han identificado un total de **250 reglas** con `Physical_Activity` como consecuente.
+
+A continuación, se genera un gráfico de dispersión para visualizar el equilibrio entre soporte y confianza, resaltando el valor de lift para identificar asociaciones más significativas.
+
+```{r}
+plot(physical_activity_rules_03, method = "scatterplot", measure = c("support", "confidence"), shading = "lift")
+```
+
+Observamos que las asociaciones más significativas en términos de lift tienden a formarse alrededor del umbral de confianza establecido (0.3).
+Esto sugiere que, si bien estas reglas no tienen una confianza extremadamente alta, su capacidad para mejorar la predicción de `Physical_Activity` en comparación con el azar sigue siendo notable.
+
+Para profundizar en estas asociaciones, vamos a analizar las **10 reglas con mayor lift**, ya que estas representan las combinaciones de variables más relevantes para predecir `Physical_Activity`.
+
+```{r}
+high_lift_rules_03 <- head(sort(physical_activity_rules_03, by = "lift"), 10)
+inspect(high_lift_rules_03)
+```
+
+Dentro de las 10 reglas con mayor Lift, encontramos que únicamente los valores **Physical_Activity=2 Horas** y **Physical_Activity=3 Horas** aparecen como consecuentes.
+Es decir, las reglas más significativas desde el punto de vista de la relación entre el antecedente y el consecuente (según la métrica del Lift) son aquellas que predicen que un estudiante realiza 2 o 3 horas de actividad física.
+
+Sin embargo, no encontramos reglas donde los consecuentes sean **0 horas, 1 hora, o, por otro lado, más de 4 horas de actividad física**.
+Este patrón puede deberse a varias razones, y una explicación relevante es la que surgió durante el análisis exploratorio: **la mayoría de los estudiantes tienden a concentrarse en torno a 2 o 3 horas de actividad física**.
+
+Esto implica que la distribución de la actividad física en el conjunto de datos está sesgada hacia valores más bajos, especialmente hacia 2 y 3 horas de actividad física, lo cual puede hacer que las asociaciones más fuertes entre las variables se encuentren en estos valores.
+
+Por último, vamos a visualizar las reglas con mayor lift mediante un gráfico de red para explorar las relaciones entre los antecedentes y **Physical_Activity**, para así poder analizar dichas asociaciones y establecer conclusiones al estudio.
+
+```{r}
+# Visualización de las reglas encontradas
+plot(high_lift_rules_03, method = "graph", engine = "htmlwidget")
+```
+
+**Análisis de las reglas**
+
+Se observa que los estudiantes con calificaciones **aprobadas**, **alta asistencia** y **horas razonables de estudio** tienen una mayor probabilidad de realizar **2 horas de actividad física**.
+Además destacar que esto se refuerza cuando se incluyen características como **pocas sesiones de tutoría** y **calificaciones sobresalientes** en los exámenes previos, aunque la fuerza de la asociación disminuye ligeramente al incluir estos factores adicionales.
+
+Por otro lado, también se identifican asociaciones significativas para aquellos estudiantes con calificaciones sobresalientes o notables, que muestran una probabilidad elevada de realizar **3 horas de actividad física**, especialmente cuando se combinan con asistencia alta y horas de estudio moderadas.
+La explicación es que puede que a medida de que los estudiantes tengan una mayor calificación y una asistencia y horarios estudio más constante, es más probable que sus horas empleadas a la actividad física aumenten.
+
+El valor de lift en estas reglas, que varía entre 1.13 y 1.30, sugiere que las asociaciones encontradas tienen una relación moderadamente significativa con las horas de actividad física, siendo ligeramente más fuertes que el azar.
+
+**Reglas de asociación con confidence= 0.2**
+
+En el análisis previo, al utilizar un valor de confianza de 0.3, observamos que solo se generaron reglas cuyo consecuente era de 2 y 3 horas de actividad física.
+Sin embargo, al no encontrar reglas con otros valores, como menos de 2 horas o más de 4 horas, se va a probar con un umbral de confianza más bajo, **0.2**.
+Esto permitirá la inclusión de reglas que, aunque no sean tan fuertes como las anteriores, podrían ser relevantes para el estudio.
+
+De este modo, se va a permitir la detección de reglas menos frecuentes, es decir, aquellas en las que el antecedente y el consecuente no se presentan con tanta regularidad.
+Esto facilita la identificación de asociaciones que de otro modo habrían sido descartadas debido a su baja frecuencia.
+Sin embargo, **estas asociaciones serán menos confiables en comparación con las reglas generadas con un umbral de confianza más alto**.
+
+Además, en esta ocasión decidimos excluir las reglas previamente obtenidas que tenían como consecuente 2 y 3 horas, ya que estas ya se habían identificado en el análisis anterior.
+
+```{r}
+# Filtrar las reglas con confidence 0.2
+physical_activity_rules_02 <- apriori(df_transactions, 
+                 parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
+                 appearance = list(rhs = c("Physical_Activity=0 Horas", "Physical_Activity=1 Hora", "Physical_Activity=4 Horas", "Physical_Activity=5 Horas",
+                                           "Physical_Activity=6 Horas", "Physical_Activity=Fuera de Rango"), 
+                                   default = "lhs"))
+
+
+
+inspect(physical_activity_rules_02)
+```
+
+Después de reducir el umbral de confianza, se han identificado un total de **181 reglas** con `Physical_Activity` como consecuente.
+
+A continuación, se genera un gráfico de dispersión para visualizar el equilibrio entre soporte y confianza, resaltando el valor de lift para identificar asociaciones más significativas.
+
+```{r}
+plot(physical_activity_rules_02, method = "scatterplot", measure = c("support", "confidence"), shading = "lift")
+```
+
+Al igual que en el anterior scatter plot vemos que las reglas con mayor lift se encuentran cercanas al 0.3 de confidence.
+Esto puede significar que dichas reglas son más interesantes en términos relativos (alto lift) aunque no ocurren con mucha frecuencia (confidence baja).
+
+```{r}
+high_lift_rules_02 <- head(sort(physical_activity_rules_02, by = "lift"), 10)
+inspect(high_lift_rules_02)
+```
+
+Entre las reglas generadas, observamos que únicamente hay asociaciones en las que el consecuente es **Physical_Activity=4 Horas**, lo que indica que las reglas tienden a relacionarse con estudiantes que realizan cuatro horas de actividad física.
+Este patrón se repite en la mayoría de las reglas, independientemente de las características del antecedente, como la puntuación en los exámenes, el número de sesiones de tutoría o la asistencia.
+
+Sin embargo, no encontramos reglas con Physical_Activity=0 horas, Physical_Activity=1 hora, ni con valores superiores a 4 horas.
+Esto confirma la conclusión de que dentro de los datos disponibles, existe una tendencia a que los estudiantes se ubiquen cerca de la media, que es de 4 horas de actividad física.
+
+Vamos a examinar más a fondo las reglas observando el gráfico de red generado.
+
+```{r}
+plot(high_lift_rules_02, method = "graph", engine = "htmlwidget")
+```
+
+**Análisis de reglas**
+
+Las reglas generadas con un umbral de confianza del 0.1 para **Physical_Activity=4 Horas** revelan ciertas asociaciones.
+En general, los estudiantes con **calificaciones previas aprobadas**, **calificación de Bien en el exámen final**, **alta asistencia** y **horas razonables de estudio** tienen una probabilidad notable de realizar **4 horas de actividad física**.
+Esta tendencia se observa consistentemente en las reglas, lo que sugiere que una combinación de un desempeño académico moderado y un comportamiento de estudio organizado puede estar vinculada con un tiempo considerable de actividad física (Una conclusión bastante similar a la que sacabamos en el anterior análisis de reglas).
+
+El **impacto de las tutorías es más limitado, pero aún presente**, ya que las reglas que incluyen la variable de pocas sesiones de tutoría tienden a mostrar una leve disminución en la probabilidad de realizar 4 horas de actividad física en comparación con aquellas sin tutorías.
+Además, se observa que la asistencia media en combinación con horas razonables de estudio y pocas sesiones de tutoría también está asociada con una probabilidad de realizar 4 horas de actividad física.
+
+#### Conclusiones
+
+-   El análisis de reglas de asociación entre el desempeño académico y la actividad física de los estudiantes ha revelado ciertos patrones interesantes que sugieren una relación moderada entre ciertos comportamientos académicos y el tiempo dedicado a la actividad física, **particularmente entre las 2 y 3 horas de actividad física**.
+
+-   Al reducir el umbral de confianza a 0.3, se identificaron **250 reglas** centradas en estudiantes que realizan **2 o 3 horas de actividad física**.
+    Los estudiantes con calificaciones aprobadas y asistencia alta tienden a realizar 2 horas de actividad física, mientras que los de calificaciones sobresalientes tienden a hacer 3 horas.
+
+-   Para optar por mayor abanico de horas se tuvo que reducir el umbral aunque sin mucho exito.
+    Se encontraron **181 reglas**, que se centraron principalmente en **4 horas de actividad física**.
+    En estas reglas, las tutorías tuvieron un impacto menor, sugiriendo que calificaciones y asistencia son más influyentes en la cantidad de actividad física realizada.
+
+-   Los resultados obtenidos sugieren que la actividad física de los estudiantes tiende a concentrarse principalmente entre 2 y 4 horas semanales, con un predominio de 4 horas.
+    Se ha llegado a la conclusión debido a la gran concentración de estudiantes en estos rangos de actividad física, no ha sido posible observar reglas significativas para valores extremos, como 0 horas, 1 hora, o más de 5 horas.
+
+-   En **términos generales**, se observa que la actividad física de los estudiantes tiende a concentrarse en torno a un valor común de 4 horas semanales, lo cual podría estar relacionado con diversas restricciones de tiempo, hábitos establecidos u otros factores contextuales.
+    Una posible explicación es que, al compartir una carga académica similar y tener horarios de estudio equilibrados, los estudiantes ajustan su actividad física a una cantidad de tiempo que perciben como razonable y manejable dentro de su rutina diaria.
+    Así, los datos sugieren que los factores académicos, que implican la gestión del tiempo, **no parecen limitar de manera significativa la cantidad de tiempo que los estudiantes dedican a la actividad física**.
+    En cambio, el tiempo dedicado al ejercicio parece estar más determinado por la elección personal de los estudiantes, o por otros factores que no fueron considerados en los datos obtenidos.
+
+-   Es importante destacar que la similitud y baja correlación entre los datos ha impedido obtener conclusiones más definitivas o generales más allá de lo observado en este estudio.
+
+### EXTRA: Exploración de Reglas de Asociación con el Conjunto Completo de Datos
+
+En esta sección adicional, se ampliará el análisis de reglas de asociación para incluir todas las variables del conjunto de datos, con el objetivo de explorar posibles patrones más complejos y relaciones entre las variables académicas y la actividad física de los estudiantes. 
+
+A diferencia del análisis previo, que se centró únicamente en las variables académicas relacionadas directamente con la actividad física, en este apartado se buscarán asociaciones más amplias que puedan ofrecer una visión más completa sobre los factores que influyen en el tiempo que los estudiantes dedican al ejercicio físico. Este enfoque permitirá identificar patrones y comprender cómo diversas características del desempeño académico, la asistencia, las calificaciones previas y otras variables podrían estar vinculadas con las horas de actividad física realizadas.
+
+
+```{r}
+df_all_vars <- data
+
+df_all_vars <- df_all_vars %>%
+  select(-School_Type_Public, -Gender_Female, -Previous_Scores_Category)
+
+head(df_all_vars)
+str(df_all_vars)
+```
+
+A continuación, debemos recategorizar todas las variables que habian sido pasadas a numérico en el preprocesamiento de `global.Rmd`.
+
+```{r}
+df_all_vars <- recategorize_variable(df_all_vars, "Parental_Involvement", c("Low", "Medium", "High"))
+df_all_vars <- recategorize_variable(df_all_vars, "Access_to_Resources", c("Low", "Medium", "High"))
+df_all_vars <- recategorize_variable(df_all_vars, "Motivation_Level", c("Low", "Medium", "High"))
+df_all_vars <- recategorize_variable(df_all_vars, "Parental_Education_Level", c("High School", "College", "Postgraduate"))
+df_all_vars <- recategorize_variable(df_all_vars, "Family_Income", c("Low", "Medium", "High"))
+df_all_vars <- recategorize_variable(df_all_vars, "Teacher_Quality", c("Low", "Medium", "High"))
+df_all_vars <- recategorize_variable(df_all_vars, "Distance_from_Home", c("Near", "Moderate", "Far"))
+df_all_vars <- recategorize_variable(df_all_vars, "Peer_Influence", c("Negative", "Neutral", "Positive"))
+
+df_all_vars$Extracurricular_Activities <- factor(df_all_vars$Extracurricular_Activities, levels = c(0, 1), labels = c("No", "Yes"))
+df_all_vars$Internet_Access <- factor(df_all_vars$Internet_Access, levels = c(0, 1), labels = c("No", "Yes"))
+df_all_vars$Learning_Disabilities <- factor(df_all_vars$Learning_Disabilities, levels = c(0, 1), labels = c("No", "Yes"))
+df_all_vars$School_Type_Private <- factor(df_all_vars$School_Type_Private, levels = c(0, 1), labels = c("No", "Yes"))
+df_all_vars$Gender_Male <- factor(df_all_vars$Gender_Male, levels = c(0, 1), labels = c("No", "Yes"))
+
+head(df_all_vars)
+str(df_all_vars)
+```
+
+
+```{r}
+df_all_vars <- df_all_vars %>%
+  mutate(
+    # Categorizar el puntaje del examen directamente en la columna 'Exam_Score'
+    Exam_Score = case_when(
+      Exam_Score >= 50 & Exam_Score <= 69 ~ "Aprobado",
+      Exam_Score >= 70 & Exam_Score <= 79 ~ "Bien",
+      Exam_Score >= 80 & Exam_Score <= 89 ~ "Notable",
+      Exam_Score >= 90 ~ "Sobresaliente",
+      TRUE ~ "Fuera de Rango"  # En caso de valores fuera del rango
+    ),
+    
+    # Categorizar las calificaciones anteriores ('Previous_Scores')
+    Previous_Scores = case_when(
+      Previous_Scores >= 50 & Previous_Scores <= 69 ~ "Aprobado",
+      Previous_Scores >= 70 & Previous_Scores <= 79 ~ "Bien",
+      Previous_Scores >= 80 & Previous_Scores <= 89 ~ "Notable",
+      Previous_Scores >= 90 ~ "Sobresaliente",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    # Categorizar la asistencia ('Attendance')
+    Attendance = case_when(
+      Attendance < 60 ~ "Baja",  # Ajustado a un límite más realista
+      Attendance >= 60 & Attendance < 75 ~ "Media",
+      Attendance >= 75 ~ "Alta",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    # Categorizar las horas de estudio ('Hours_Studied') en los rangos especificados
+    Hours_Studied = case_when(
+      Hours_Studied >= 0 & Hours_Studied <= 5 ~ "Pocas horas",
+      Hours_Studied >= 6 & Hours_Studied <= 15 ~ "Horas moderadas",
+      Hours_Studied >= 16 & Hours_Studied <= 30 ~ "Horas razonables",
+      Hours_Studied >= 31 & Hours_Studied <= 40 ~ "Horas intensivas",
+      Hours_Studied > 40 ~ "Excesivas",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    # Categorizar las sesiones de tutoría ('Tutoring_Sessions')
+    Tutoring_Sessions = case_when(
+      Tutoring_Sessions == 0 ~ "Sin tutoría",
+      Tutoring_Sessions >= 1 & Tutoring_Sessions <= 3 ~ "Pocas sesiones",
+      Tutoring_Sessions > 3 ~ "Muchas sesiones",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    # Categorizar las horas de estudio ('Hours_Studied') en los rangos especificados
+    Sleep_Hours = case_when(
+      Sleep_Hours >= 0 & Sleep_Hours <= 6 ~ "Poco sueño",
+      Sleep_Hours >= 7 & Sleep_Hours <= 9 ~ "Sueño moderado",
+      Sleep_Hours >= 10 ~ "Mucho sueño",
+      TRUE ~ "Datos inválidos"
+    )
+    
+  ) %>%
+  mutate(
+    # Convertir las columnas categóricas a factores
+    Exam_Score = factor(Exam_Score, levels = c("Aprobado", "Bien", "Notable", "Sobresaliente", "Fuera de Rango")),
+    Sleep_Hours = factor(Sleep_Hours, levels = c("Poco sueño", "Sueño moderado", "Mucho sueño", "Fuera de Rango")),
+    Previous_Scores = factor(Previous_Scores, levels = c("Aprobado", "Bien", "Notable", "Sobresaliente", "Fuera de Rango")),
+    Attendance = factor(Attendance, levels = c("Baja", "Media", "Alta", "Fuera de Rango")),
+    Hours_Studied = factor(Hours_Studied, levels = c("Pocas horas", "Horas moderadas", "Horas razonables", "Horas intensivas", "Excesivas", "Fuera de Rango")),
+    Tutoring_Sessions = factor(Tutoring_Sessions, levels = c("Sin tutoría", "Pocas sesiones", "Muchas sesiones", "Fuera de Rango"))
+  )
+```
+
+En este caso, categorizamos la variable `Physical_Activity` en 3 grupos:
+
+- Poca actividad: Entre 0 y 2 horas.
+
+- Media actividad: 3 horas.
+
+- Alta actividad: Más de 4 horas.
+
+```{r}
+df_all_vars <- df_all_vars %>%
+  mutate(
+    Physical_Activity = case_when(
+      Physical_Activity >= 0 & Physical_Activity <= 1  ~ "Poca actividad",
+      Physical_Activity >= 2 & Physical_Activity <= 4 ~ "Media actividad",
+      Physical_Activity >= 5 ~ "Mucha actividad",
+      TRUE ~ "Fuera de Rango"
+    ),
+    
+    Physical_Activity = factor(Physical_Activity, 
+                                levels = c("Poca actividad", "Media actividad", "Mucha actividad", "Fuera de Rango"))
+  )
+
+head(df_all_vars)
+str(df_all_vars)
+```
+
+
+Hemos categorizado todas las variables necesarias por lo que el siguiente paso es realizar el análisis de reglas de asociación.
+
+Antes que nada, vamos a asegurarnos de que los datos estén en un formato adecuado para el algoritmo Apriori. Esto implica convertir las variables categóricas a un formato de transacción, que es el que acepta dicho algoritmo.
+
+```{r}
+df_all_vars_factor <- df_all_vars %>%
+  select_if(is.factor)
+
+transacciones <- as(df_all_vars_factor, "transactions")
+summary(transacciones)
+```
+
+En este caso, como tenemos muchas más variables que en el estudio anterior vamos a aumentar los umbrales mínimos de soporte  y confianza. 
+
+- Umbral de soporte: **0.1**
+
+- Confianza: **0.8**
+
+Esto quiere decir que estamos buscando reglas que ocurran al menos en el 10% de las transacciones y que tengan al menos un 80% de confianza, es decir, significa que si el antecedente de la regla ocurre, al menos el 80% de las veces el consecuente también ocurrirá.
+
+```{r}
+reglas <- apriori(transacciones, 
+                  parameter = list(supp = 0.1, conf = 0.8, target = "rules"))
+
+summary(reglas)
+``` 
+
+En este caso, el algoritmo ha generado **30,489 reglas**. El soporte mínimo es 0.1 y el promedio es 0.1445, indicando que las reglas ocurren en al menos el 10% de las transacciones. La confianza mínima tiene un promedio de 0.899, lo que significa que las reglas son bastante confiables. 
+Respecto al Lift, el promedio es 1.0106, mostrando una relación positiva entre los elementos de las reglas. 
+
+La longitud de las reglas varía entre 1 y 8 elementos, siendo las más comunes las de 4 a 6 elementos.
+
+Mostramos las 10 primeras reglas generadas:
+
+```{r}
+# Ver las primeras 10 reglas
+inspect(head(reglas, 10))
+
+# Ordenar las reglas por confianza
+reglas_ordenadas <- sort(reglas, by = "confidence", decreasing = TRUE)
+inspect(head(reglas_ordenadas, 10))
+```
+
+```{r}
+# Filtrar las reglas cuyo consecuente contiene 'Poca actividad'
+reglas_actividad <- apriori(transacciones, 
+                 parameter = list(support = 0.1, confidence = 0.8, minlen = 2),
+                 appearance = list(rhs = c("Physical_Activity=Poca actividad", "Physical_Activity=Media actividad", "Physical_Activity=Mucha actividad"), 
+                                   default = "lhs"))
+
+inspect(head(reglas_actividad, 100))
+```
+```{r}
+summary(reglas_actividad)
+```
+Respecto de las reglas con la actividad fisica en el antecendente, se han obtenido **9319 reglas**.
+Respecto al soporte, es bastante similar al de todas las reglas, con un promedio de 0.1449. 
+La confianza mínima es 0.839 lo que indica que dichas reglas tienen alta fiabilidad. 
+
+```{r}
+plot(reglas_actividad, method = "scatterplot", measure = c("support", "confidence"), shading = "lift")
+```
+Observamos que aquellas que tienen un Lift más alto se encuentra por encima de una confianza del 0.9 lo que indica que estas reglas existe una gran fiabilidad de la relación por lo que estas reglas son altamente predictivas y muestran asociaciones muy robustas.
+
+
+```{r}
+high_lift_reglas_actividad <- head(sort(reglas_actividad, by = "lift"), 10)
+inspect(high_lift_reglas_actividad)
+```
+
+```{r}
+# Visualización de las reglas encontradas
+plot(high_lift_reglas_actividad, method = "graph", engine = "htmlwidget")
+```
+
+A partir de las 10 reglas de asociación con mayor lift sobre la variable `Physical_Activity` vamos a analizar y extraer conclusiones sobre cuales son las variables que más influyen en la actividad física del estudiante:
+
+- Las **actividades extracurriculares** juegan un papel clave en la actividad física, ya que en las reglas con mayor lift se observa que la presencia de actividades extracurriculares (como "Extracurricular_Activities=Yes") se asocia con una mayor probabilidad de realizar una actividad física de nivel medio (media actividad).
+
+- La **calidad del docente (ya sea alta o media)** es otro factor importante en las reglas que implican una actividad física media. Un profesor de alta calidad se asocia positivamente con una mayor probabilidad de actividad física en combinación con otras variables como las actividades extracurriculares o el acceso a tutorías.
+
+- La **participación de los padres** en la educación de los estudiantes, especialmente cuando es de nivel medio, se encuentra en muchas de las reglas. Los estudiantes con participación parental moderada son más propensos a estar involucrados en actividades físicas.
+
+- Respecto al sueño, tener **horas de sueño moderadas** tiene una relación positiva con la actividad física media. Las reglas muestran que aquellos estudiantes con un patrón de sueño moderado tienden a realizar más actividad física cuando también tienen un buen rendimiento académico y una participación parental adecuada.
+
+- El **acceso a Internet** y la **ausencia de discapacidades de aprendizaje** también están asociados a un nivel moderado de actividad física, pero la mayoría de los estudiantes ya tienen acceso a Internet y no tienen discapacidades. Esto puede causar un sesgo en las reglas, ya que la alta prevalencia de estas condiciones hace que parezcan más influyentes de lo que realmente son en la realidad.
+
+- Por último, en algunas reglas, el **ingreso familiar medio** también está asociado con una mayor actividad física. Sin embargo, su impacto parece ser más moderado en comparación con otros factores, pero sigue siendo un aspecto que influye en el comportamiento general de actividad física.
+
+**Conclusión general**
+
+Las variables más influyentes sobre la actividad física son aquellas que están relacionadas con el entorno educativo y familiar, tales como la calidad del docente, la participación de los padres, el horario de estudio, y la presencia de actividades extracurriculares. Además, factores como el sueño moderado y el acceso a Internet también parecen tener un impacto relevante en la actividad física.
+
+En definitiva, con este último análisis y estudio se han conseguido determinar mediante reglas de asociación como el entorno educativo y familiar, como la calidad del docente, la participación de los padres y las actividades extracurriculares, **influyen directamente en los niveles de actividad física de los estudiantes**. Además, factores como un horario de estudio equilibrado, el sueño moderado y el acceso a Internet también juegan un papel importante. 
+
+
+## Bibliografía y herramientras
+
+-   Hattie, J.
+    (2009).
+    "Visible Learning." <https://www.routledge.com/Visible-Learning-A-Synthesis-of-Over-800-Meta-Analyses-on-School-Effectiveness/Hattie/p/book/9780415476188>
+
+-   Bashir, M., & Liu, M.
+    (2016).
+    "The Impact of School Type on Academic Achievement: Evidence from China." <https://www.tandfonline.com/doi/abs/10.1080/03057925.2015.1133031>
+
+-   Universidad de Jaén (2023).
+    "Análisis descriptivo y de relación entre la actividad física y el rendimiento académico en jóvenes estudiantes del centro de España."(<https://investigacion.ujaen.es/documentos/608a7229e4bbc72e75304e25>)
+
+-   R Graph Gallery.
+    <https://r-graph-gallery.com/>
+
+-   Data Visualization Catalogue.
+    <https://datavizcatalogue.com/index.html>
+
+-   ggplot2 Documentation.
+    <https://ggplot2.tidyverse.org/>
+
+Destacar que con el único propósito de solucionar errores ortográficos, ayudar en la redacción y aclarar explicaciones se ha hecho uso de herramientas de IA.
+Sin embargo, el código, contenido y conclusiones de este documento son el resultado de un análisis independiente y original.
