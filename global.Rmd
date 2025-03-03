@@ -3636,11 +3636,11 @@ Asimismo, el hecho de que el `Cluster 1` obtenga mejores resultados finales sugi
 
 En general, el análisis sugiere que **el éxito académico no depende exclusivamente de la cantidad de horas dedicadas al estudio o la asistencia a clases**, sino que puede estar influenciado por la capacidad de los estudiantes para optimizar su aprendizaje y aplicar eficazmente sus conocimientos en situaciones evaluativas clave.
 
-### Análisis del Desempeño Académico y Factores que Influyen en la Mejora del Estudiante
+### Pregunta 2. ¿Cuáles son los factores clave que determinan si un estudiante mejorará su rendimiento académico?
 
 #### Introducción
 
-¿Cuáles son los factores clave que determinan si un estudiante mejorará su rendimiento académico?
+Análisis del Desempeño Académico y Factores que Influyen en la Mejora del Estudiante.
 
 El objetivo de este estudio es identificar los factores que influyen en la mejora del rendimiento académico de los estudiantes. Para lograrlo, se han utilizado técnicas de aprendizaje automático que permiten analizar grandes volúmenes de datos y extraer patrones que pueden ser utilizados para la toma de decisiones en el ámbito educativo.
 
@@ -3788,15 +3788,15 @@ print(conf_mat)
 
 ```
 
--   Accuracy (Precisión): El modelo tiene una precisión del 92%.
+-   Accuracy (Precisión): El modelo tiene una precisión del 53,92%.
 
--   Sensitivity (Sensibilidad): El 95.97% de los estudiantes que mejoraron fueron correctamente identificados.
+-   Sensitivity (Sensibilidad): El 52.33% de los estudiantes que mejoraron fueron correctamente identificados.
 
--   Specificity (Especificidad): El 90.09% de los estudiantes que no mejoraron fueron correctamente identificados.
+-   Specificity (Especificidad): El 54,69% de los estudiantes que no mejoraron fueron correctamente identificados.
 
--   Kappa: Valor de 0.8251, indicando un alto nivel de acuerdo más allá del azar.
+-   Kappa: Valor de 0.0626, sugiere un bajo nivel de acuerdo entre la predicción del modelo y la realidad, indicando que el modelo no está logrando una clasificación efectiva más allá del azar.
 
-El modelo muestra un buen desempeño en términos de precisión y equilibrio entre sensibilidad y especificidad, lo cual es importante dado el desbalance original de clases.
+El modelo tiene un bajo rendimiento, con una precisión cercana al azar (~54%), lo que indica que no está capturando bien los patrones en los datos.
 
 ```{r}
 # Calcular probabilidades de predicción
@@ -3823,6 +3823,8 @@ var_imp <- varImp(rf_model)
 plot(var_imp, top = 11, main = "Importancia de Variables")
 
 ```
+
+Como podemos observar, las variables más importantes son, la atención y la calidad del profesor.
 
 #### Arbol de decision
 
@@ -4050,4 +4052,60 @@ animate(
 )
 anim_save("arbol_decision_animado.gif")
 
+```
+
+```{r}
+# Cargar librerías necesarias
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(tibble)
+library(forcats)
+
+# 1️⃣ Añadir un identificador único para cada estudiante
+#Hecho Antes en el GIFT
+
+# 2️⃣ Convertir 'Improved' en una variable categórica con etiquetas
+#Hecho Antes en el GIFT
+
+# 3️⃣ Asignar a cada fila del dataset su etapa en el árbol
+#Hecho Antes en el GIFT
+
+testData_interactive <- assign_tree_steps(testData)
+
+# 4️⃣ Definir colores para cada etapa y formas para 'Improved'
+#Hecho Antes en el GIFT
+
+# 5️⃣ Crear el gráfico interactivo con ggplot2
+plot <- ggplot(testData_interactive, aes(
+  x = Attendance, y = Hours_Studied, 
+  color = step, 
+  text = paste(
+    "ID:", id, "<br>",
+    "Asistencia:", round(Attendance, 1), "%<br>",
+    "Horas de Estudio:", round(Hours_Studied, 1), "<br>",
+    "Etapa:", step, "<br>",
+    "Mejoró:", Improved
+  ))) +
+  geom_point(aes(shape = Improved, fill = Improved), size = 3, alpha = 0.8) +
+  scale_color_manual(values = color_mapping, name = "Etapa del Árbol") +
+  scale_shape_manual(values = shape_mapping, name = "Mejora") +
+  scale_fill_manual(values = c("No mejoró" = "white", "Mejoró" = "black"), name = "Mejora") +
+  labs(
+    title = "Clasificación en el Árbol de Decisión",
+    x = "Asistencia (%)",
+    y = "Horas de Estudio"
+  ) +
+  theme_minimal(base_size = 14)
+
+# 6️⃣ Convertir el gráfico a una versión interactiva con ggplotly
+interactive_plot <- ggplotly(plot, tooltip = "text") %>%
+  layout(
+    title = list(text = "Clasificación en el Árbol de Decisión", font = list(size = 16)),
+    xaxis = list(title = "Asistencia (%)"),
+    yaxis = list(title = "Horas de Estudio")
+  )
+
+# 7️⃣ Mostrar el gráfico interactivo
+interactive_plot
 ```

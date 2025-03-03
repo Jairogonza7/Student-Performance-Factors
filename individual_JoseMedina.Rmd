@@ -1,0 +1,226 @@
+---
+title: "Students Performance Factors"
+author: "José Medina"
+output: html_notebook
+---
+
+# Análisis del Rendimiento Académico
+
+## Introducción
+
+En este estudio, analizamos los factores que influyen en el rendimiento académico de los estudiantes, centrándonos en dos aspectos clave:
+
+1.  **Estrategias de estudio para estudiantes con dificultades de aprendizaje**: Evaluamos si la relación entre horas de estudio y rendimiento es distinta para estudiantes con y sin discapacidades de aprendizaje, así como la influencia de factores como la motivación, la asistencia y las tutorías.
+2.  **Impacto del sueño y el estudio en el rendimiento académico**: Analizamos cómo la combinación de horas de sueño y estudio afecta el rendimiento, identificando el equilibrio óptimo entre ambas variables.
+
+Utilizaremos modelos estadísticos de regresión y análisis de superficie de respuesta para interpretar los datos y extraer conclusiones fundamentadas.
+
+# Pregunta 1: ¿La relación de horas de estudio y redimiento es distinta para estudiantes con descacidades de aprendizaje?
+
+Este estudio investiga si los estudiantes con dificultades de aprendizaje requieren estrategias de estudio diferentes para alcanzar el mismo nivel de desempeño que sus compañeros sin discapacidades. Específicamente, analizaremos:
+
+1.  **Si la relación entre horas de estudio y rendimiento es distinta para estudiantes con y sin discapacidades de aprendizaje.**
+2.  **Si otros factores como la motivación, las tutorías y la asistencia tienen un mayor impacto en el desempeño de los estudiantes con dificultades de aprendizaje.**
+
+Para ello, utilizaremos modelos de regresión con interacciones y evaluaremos la importancia de diferentes factores en el rendimiento académico.
+
+------------------------------------------------------------------------
+
+## Comparación de la relación entre horas de estudio y rendimiento según dificultades de aprendizaje
+
+Para evaluar si la relación entre horas de estudio y rendimiento varía entre estudiantes con y sin dificultades de aprendizaje, ajustamos un modelo de regresión con interacción.
+
+```{r, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(lme4)
+
+# Cargar datos limpiados
+df <- read.csv("df_cleaned.csv")
+
+# Crear directorio para guardar imágenes
+if (!dir.exists("individual_JoseMedina_files")) {
+  dir.create("individual_JoseMedina_files")
+}
+
+# Ajustar modelo de regresión con interacción
+modelo_interaccion <- lm(Exam_Score ~ Hours_Studied * Learning_Disabilities, data=df)
+summary(modelo_interaccion)
+
+# Guardar y mostrar gráfico de interacción
+p1 <- ggplot(df, aes(x=Hours_Studied, y=Exam_Score, color=factor(Learning_Disabilities))) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method="lm", se=FALSE) +
+  labs(title="Relación entre Horas de Estudio y Rendimiento Académico",
+       x="Horas de Estudio",
+       y="Puntaje en Examen",
+       color="Dificultades de Aprendizaje")
+
+ggsave("individual_JoseMedina_files/interaction_study_disabilities.png", plot=p1, width=8, height=6)
+print(p1)
+```
+
+### **Conclusión de la Relación entre Horas de Estudio y Rendimiento**
+
+-   El coeficiente de interacción entre `Hours_Studied` y `Learning_Disabilities` no es significativo (**p = 0.4397**), lo que indica que el efecto de las horas de estudio sobre el rendimiento académico **no varía de manera considerable** entre estudiantes con y sin dificultades de aprendizaje.
+-   Sin embargo, el coeficiente de `Learning_Disabilities` es negativo y significativo (**β = -1.367**, **p = 0.00676**), lo que sugiere que los estudiantes con dificultades de aprendizaje tienen, en promedio, un rendimiento académico más bajo en comparación con aquellos sin dificultades.
+-   La pendiente de la regresión indica que el tiempo de estudio tiene un **impacto positivo en el rendimiento académico**, aunque no hay evidencia estadística de que este impacto sea diferente para los dos grupos.
+
+**Implicación:** Aunque los estudiantes con dificultades de aprendizaje tienen un rendimiento promedio menor, la relación entre estudio y desempeño es similar, lo que sugiere que estrategias de refuerzo académico podrían ayudarlos a cerrar la brecha en su desempeño.
+
+------------------------------------------------------------------------
+
+## Evaluación del impacto de otros factores en el rendimiento académico
+
+Además de las horas de estudio, analizamos si otros factores como la **motivación, la asistencia y el acceso a tutorías** influyen en el desempeño de los estudiantes con dificultades de aprendizaje.
+
+```{r}
+modelo_factores <- lm(Exam_Score ~ Hours_Studied + Motivation_Level + Attendance + Tutoring_Sessions + Learning_Disabilities + 
+                        Motivation_Level * Learning_Disabilities + Attendance * Learning_Disabilities + Tutoring_Sessions * Learning_Disabilities,
+                        data=df)
+summary(modelo_factores)
+
+# Guardar y mostrar gráfico de importancia de factores
+library(ggplot2)
+library(broom)
+
+# Extraer coeficientes del modelo
+effects <- tidy(modelo_factores)
+
+p2 <- ggplot(effects, aes(x=reorder(term, estimate), y=estimate, fill=estimate > 0)) +
+  geom_col() +
+  coord_flip() +
+  labs(title="Impacto de Factores en el Rendimiento Académico",
+       x="Variables",
+       y="Efecto Estimado") +
+  theme_minimal()
+
+ggsave("individual_JoseMedina_files/factor_importance.png", plot=p2, width=8, height=6)
+print(p2)
+```
+
+### **Conclusión sobre el Impacto de Otros Factores**
+
+-   **Motivación, asistencia y tutorías son factores clave para el rendimiento académico**:
+    -   `Motivation_Level` (**β = 0.519**, **p \< 2e-16**) y `Attendance` (**β = 0.1985**, **p \< 2e-16**) tienen una influencia positiva y significativa en el rendimiento académico.
+    -   `Tutoring_Sessions` tiene un impacto aún mayor (**β = 1.944**, **p \< 2e-16**), indicando que el acceso a tutorías mejora notablemente el rendimiento.
+-   **Los estudiantes con dificultades de aprendizaje no muestran diferencias significativas en cómo estos factores los afectan**:
+    -   La única interacción significativa es `Attendance:Learning_Disabilities` (**β = -0.0207**, **p = 0.0221**), indicando que la asistencia tiene un impacto **ligeramente menor** en estos estudiantes.
+
+**Implicación:** La motivación y el acceso a tutorías tienen un impacto clave en el rendimiento de todos los estudiantes, sin importar si tienen dificultades de aprendizaje. Sin embargo, la asistencia a clases parece ser menos determinante para los estudiantes con dificultades de aprendizaje, lo que sugiere que pueden requerir **métodos alternativos de aprendizaje**, como sesiones personalizadas o materiales complementarios.
+
+------------------------------------------------------------------------
+
+## **Conclusión General**
+
+1.  **El rendimiento académico de los estudiantes con dificultades de aprendizaje es, en promedio, menor que el de sus compañeros sin dificultades.** Sin embargo, la cantidad de horas de estudio influye en ambos grupos de manera similar.
+2.  **La motivación, la asistencia y las tutorías juegan un papel crucial en el rendimiento académico.** Las tutorías tienen el mayor impacto positivo.
+3.  **Los estudiantes con dificultades de aprendizaje pueden beneficiarse más de estrategias personalizadas,** ya que la asistencia a clases no parece tener el mismo peso para ellos.
+
+------------------------------------------------------------------------
+
+# Pregunta 2-**¿Cómo afecta la combinación de horas de sueño y estudio al rendimiento académico?**
+
+Este estudio busca analizar cómo la combinación de horas de sueño y estudio afecta el rendimiento académico de los estudiantes. Específicamente, se abordarán los siguientes puntos:
+
+1.  **Construir una superficie de respuesta (Response Surface Analysis) para analizar la relación entre horas de sueño, horas de estudio y calificación final.**
+2.  **Identificar el punto óptimo en el que el equilibrio entre ambas variables maximiza el rendimiento académico.**
+
+Para ello, se utilizarán modelos estadísticos de regresión cuadrática y visualizaciones en 3D para interpretar los resultados.
+
+------------------------------------------------------------------------
+
+## Análisis de la Relación entre Horas de Sueño, Estudio y Rendimiento Académico
+
+Para evaluar la interacción entre el tiempo dedicado al estudio y el descanso, ajustamos un modelo de regresión cuadrática que nos permitirá modelar relaciones no lineales.
+
+```{r, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(car)
+
+# Cargar datos limpiados
+df <- read.csv("df_cleaned.csv")
+
+# Crear directorio para guardar imágenes
+if (!dir.exists("individual_JoseMedina_files")) {
+  dir.create("individual_JoseMedina_files")
+}
+
+# Ajustar modelo de regresión cuadrática para estudiar la relación
+modelo_superficie <- lm(Exam_Score ~ poly(Hours_Studied, 2) + poly(Sleep_Hours, 2) + Hours_Studied:Sleep_Hours, data=df)
+summary(modelo_superficie)
+```
+
+### **Conclusión de la Relación entre Horas de Estudio, Sueño y Rendimiento Académico**
+
+-   **El coeficiente del término cuadrático de `Hours_Studied` no es significativo** (**p = 0.0697**), lo que indica que la relación entre las horas de estudio y el rendimiento académico **es esencialmente lineal** con una ligera tendencia no lineal que no es estadísticamente fuerte.
+-   **Los coeficientes de `poly(Sleep_Hours, 2)` no son significativos** (**p = 0.3376 y p = 0.6183**), lo que sugiere que **las horas de sueño no tienen un impacto fuerte en el rendimiento** según este modelo.
+-   **La interacción entre horas de sueño y horas de estudio (`Hours_Studied:Sleep_Hours`) tampoco es significativa** (**p = 0.7086**), lo que indica que **no hay una combinación específica de estudio y sueño que genere un efecto notable en el rendimiento académico**.
+-   A pesar de la falta de significancia en algunos coeficientes, el modelo sigue explicando una parte del rendimiento académico (**R² ajustado = 0.1986**), lo que indica que estas variables tienen cierta relación con la calificación final, pero no de una manera completamente determinante.
+
+📌 **Implicación:** No se observa una interacción clara entre las horas de estudio y las horas de sueño en términos de su impacto en el rendimiento académico. Esto sugiere que **otros factores pueden jugar un papel más importante en la determinación del rendimiento**.
+
+------------------------------------------------------------------------
+
+## Visualización de la Superficie de Respuesta
+
+Para comprender mejor la relación entre horas de estudio, sueño y rendimiento académico, generamos una visualización de la superficie de respuesta en 2D y 3D.
+
+```{r}
+library(ggplot2)
+library(reshape2)
+
+# Generar datos para la superficie
+grid <- expand.grid(
+  Hours_Studied = seq(min(df$Hours_Studied), max(df$Hours_Studied), length.out=50),
+  Sleep_Hours = seq(min(df$Sleep_Hours), max(df$Sleep_Hours), length.out=50)
+)
+grid$Predicted_Score <- predict(modelo_superficie, newdata=grid)
+
+# Crear gráfico 2D de la superficie de respuesta
+p_surface <- ggplot(grid, aes(x=Hours_Studied, y=Sleep_Hours, fill=Predicted_Score)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  labs(title="Superficie de Respuesta: Horas de Sueño vs. Estudio vs. Rendimiento",
+       x="Horas de Estudio",
+       y="Horas de Sueño",
+       fill="Puntaje Estimado")
+
+ggsave("individual_JoseMedina_files/response_surface.png", plot=p_surface, width=8, height=6)
+print(p_surface)
+```
+
+------------------------------------------------------------------------
+
+## Identificación del Punto Óptimo
+
+Finalmente, identificamos la combinación de horas de estudio y sueño que maximiza el rendimiento académico.
+
+```{r}
+# Encontrar combinación óptima
+optimal_index <- which.max(grid$Predicted_Score)
+optimal_values <- grid[optimal_index, ]
+optimal_values
+```
+
+### **Conclusión sobre la Identificación del Punto Óptimo**
+
+-   El análisis identificó el punto en el que el rendimiento académico **alcanzaría su valor máximo esperado**:
+    -   **Horas de Estudio óptimas:** 44 horas
+    -   **Horas de Sueño óptimas:** 28 horas
+    -   **Rendimiento académico estimado en este punto:** 75.2 puntos
+-   Si bien este es el punto óptimo según el modelo, **estos valores pueden no ser realistas en un contexto académico** (28 horas de sueño por semana equivale a solo 4 horas por noche, lo que es poco saludable).
+-   **Es importante considerar otros factores adicionales** como la calidad del sueño, los métodos de estudio y la distribución del tiempo de aprendizaje a lo largo del día.
+
+**Implicación:** Aunque el modelo sugiere un equilibrio entre el estudio y el sueño para maximizar el rendimiento, **es necesario evaluar la viabilidad y sostenibilidad de este punto óptimo en la práctica**.
+
+------------------------------------------------------------------------
+
+## **Conclusión General**
+
+1.  **No se encontró una relación clara y significativa entre horas de sueño, horas de estudio y rendimiento académico**, lo que sugiere que otros factores pueden tener un peso mayor en el desempeño de los estudiantes.
+2.  **El modelo identificó un punto óptimo (44 horas de estudio y 28 horas de sueño semanales) para maximizar el rendimiento,** pero estos valores pueden no ser sostenibles en la práctica.
+3.  **Es recomendable complementar el análisis con otros factores como la calidad del sueño, el nivel de estrés y la metodología de estudio,** para obtener una imagen más precisa de lo que maximiza el rendimiento académico.
+
+**Recomendación:** En lugar de centrarse únicamente en el número de horas dedicadas al estudio y al sueño, es importante fomentar estrategias de estudio eficientes, descanso adecuado y manejo del tiempo para optimizar el rendimiento académico de los estudiantes.
