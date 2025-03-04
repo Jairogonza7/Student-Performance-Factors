@@ -1622,9 +1622,11 @@ En general, el análisis sugiere que **el éxito académico no depende exclusiva
 
 Análisis del Desempeño Académico y Factores que Influyen en la Mejora del Estudiante.
 
-El objetivo de este estudio es identificar los factores que influyen en la mejora del rendimiento académico de los estudiantes. Para lograrlo, se han utilizado técnicas de aprendizaje automático que permiten analizar grandes volúmenes de datos y extraer patrones que pueden ser utilizados para la toma de decisiones en el ámbito educativo.
+El rendimiento académico de los estudiantes es un aspecto crucial para el éxito educativo y profesional. Identificar qué factores influyen en la mejora de las calificaciones es fundamental para que las instituciones educativas puedan diseñar estrategias efectivas que optimicen el aprendizaje y reduzcan la brecha de rendimiento entre los estudiantes.
 
-Dado que las variables del conjunto de datos no presentaban una correlación lineal significativa entre sí, se descartaron métodos estadísticos tradicionales y se optó por modelos basados en árboles de decisión, que permiten capturar relaciones complejas entre las variables y generar reglas interpretables.
+Diversos estudios han demostrado que factores como la asistencia a clase, la calidad del profesorado, el apoyo parental y las horas de estudio pueden impactar significativamente en el desempeño académico. Sin embargo, estas relaciones no siempre son lineales ni fáciles de modelar mediante métodos estadísticos tradicionales. Por ello, en este estudio aplicamos técnicas de aprendizaje automático para analizar el impacto de múltiples variables en la mejora del rendimiento académico, permitiendo descubrir patrones complejos que pueden no ser evidentes en análisis convencionales.
+
+El objetivo de este trabajo es determinar qué factores son clave para predecir la mejora en el rendimiento académico de los estudiantes. Para ello, utilizamos modelos de clasificación basados en árboles de decisión, que ofrecen interpretabilidad y permiten extraer reglas claras para la toma de decisiones en entornos educativos. Dado que las variables del conjunto de datos no presentaban una correlación lineal significativa entre sí, descartamos métodos estadísticos tradicionales y optamos por enfoques de aprendizaje supervisado, los cuales son más adecuados para detectar relaciones no lineales y jerárquicas entre los factores analizados.
 
 #### Preparación y Exploración de Datos
 
@@ -1637,6 +1639,7 @@ Para entender mejor la distribución de las calificaciones, se generaron histogr
 Objetivo: Entender la distribución de las calificaciones actuales (Exam_Score) y previas (Previous_Scores) para determinar si son adecuadas como variables objetivo.
 
 ```{r}
+df <- read.csv("data/df_cleaned.csv")
 # Distribución de Exam_Score
 ggplot(df_cleaned, aes(x = Exam_Score)) +
   geom_histogram(bins = 20, fill = "blue", alpha = 0.7) +
@@ -1667,6 +1670,13 @@ table(df_cleaned$Improved)
 prop.table(table(df_cleaned$Improved))
 ```
 
+## Distribución de la Variable Objetivo (`Improved`)
+
+| Clase             | Frecuencia | Proporción |
+|-------------------|------------|------------|
+| **No Mejoró (0)** | 4305       | 67.50%     |
+| **Mejoró (1)**    | 2073       | 32.50%     |
+
 Aproximadamente el 32.5% de los estudiantes mejoraron su calificación, mientras que el 67.5% no lo hicieron.
 
 Esta variable será nuestra variable objetivo para predecir la mejora en el rendimiento académico.
@@ -1688,7 +1698,7 @@ df_model$Improved <- as.factor(df_model$Improved)
 
 Eliminamos variables dummies redundantes para evitar multicolinealidad.
 
-Excluimos 'Exam_Score' y 'Previous_Scores' ya que 'Improved' es derivada de ellas.
+Eliminamos Exam_Score y Previous_Scores porque Improved es una variable derivada de ellas. Incluir estas variables en el modelo podría causar problemas de fugas de datos, ya que el modelo estaría aprendiendo directamente de la respuesta en lugar de los factores explicativos
 
 Convertimos 'Improved' a factor para su uso en modelos de clasificación.
 
@@ -1708,11 +1718,16 @@ prop.table(table(testData$Improved))
 
 ```
 
+| Clase             | Entrenamiento | Proporción | Prueba | Proporción |
+|-------------------|---------------|------------|--------|------------|
+| **No Mejoró (0)** | 4303          | 67.49%     | 2002   | 67.52%     |
+| **Mejoró (1)**    | 2073          | 32.51%     | 965    | 32.48%     |
+
 Como puede observarse la distribución de clases se mantiene consistente en ambos conjuntos, lo cual es importante para obtener un modelo representativo.
 
 Con ello aseguramos que 'testData' represente fielmente la realidad y así evaluar el modelo en datos reales y desbalanceados.
 
-Para manejar el desbalance del entrenamiento, aplicamos submuestreo de la clase mayoritaria con 'downSample':
+El conjunto de datos estaba desbalanceado, con solo el 32.5% de los estudiantes mejorando su calificación. Esto podría hacer que el modelo se incline a predecir siempre ‘No mejoró’. Para evitar este problema, aplicamos submuestreo (downSample()) para equilibrar las clases y mejorar la capacidad del modelo para detectar patrones en ambas clases.
 
 ```{r}
 # Submuestreo de la clase mayoritaria
@@ -1723,6 +1738,11 @@ trainData_balanced <- downSample(x = trainData %>% select(-Improved), y = trainD
 table(trainData_balanced$Class)
 
 ```
+
+| Clase             | Frecuencia después del Submuestreo |
+|-------------------|------------------------------------|
+| **No Mejoró (0)** | 1452                               |
+| **Mejoró (1)**    | 1452                               |
 
 Al aplicar submuestreo de la clase mayoritaria (0 - no mejoró), se equilibran las clases en el conjunto de entrenamiento. Esto permitirá que el modelo aprenda de ambas clases por igual.
 
@@ -1777,6 +1797,67 @@ print(conf_mat)
 -   Kappa: Valor de 0.0626, sugiere un bajo nivel de acuerdo entre la predicción del modelo y la realidad, indicando que el modelo no está logrando una clasificación efectiva más allá del azar.
 
 La sensibilidad y especificidad son bajas, lo que significa que el modelo no diferencia bien entre los estudiantes que mejoraron y los que no. El modelo tiene un bajo rendimiento, con una precisión cercana al azar (\~54%), lo que indica que no está capturando bien los patrones en los datos.
+
+#### Evaluación con xgboost
+
+```{r}
+set.seed(42)
+xgb_model <- train(
+  Class ~ ., 
+  data = trainData_balanced,
+  method = "xgbTree",
+  trControl = control,
+  tuneGrid = expand.grid(
+    nrounds = 100,  # Número de iteraciones, en lugar de usar ntree_limit
+    max_depth = 6,
+    eta = 0.3,
+    gamma = 0,
+    colsample_bytree = 1,
+    min_child_weight = 1,
+    subsample = 1
+  )
+)
+
+# Evaluar desempeño sin warnings
+suppressWarnings({
+  xgb_pred <- predict(xgb_model, newdata = testData)
+  conf_mat_xgb <- confusionMatrix(xgb_pred, testData$Improved, positive = "1")
+})
+
+# Comparar métricas
+print(conf_mat_xgb)
+
+```
+
+-   Accuracy (Precisión): El modelo tiene una precisión del 51,31%.
+
+-   Sensitivity (Sensibilidad): El 49.11% de los estudiantes que mejoraron fueron correctamente identificados.
+
+-   Specificity (Especificidad): El 52,36% de los estudiantes que no mejoraron fueron correctamente identificados.
+
+-   Kappa: Valor de 0.0131, sugiere un bajo nivel de acuerdo entre la predicción del modelo y la realidad, indicando que el modelo no está logrando una clasificación efectiva más allá del azar.
+
+La sensibilidad y especificidad son bajas, lo que significa que el modelo no diferencia bien entre los estudiantes que mejoraron y los que no. El modelo tiene un bajo rendimiento, con una precisión cercana al azar (\~51%), lo que indica que no está capturando bien los patrones en los datos.
+
+#### Comparación de Modelos
+
+| Métrica               | Random Forest | XGBoost |
+|-----------------------|---------------|---------|
+| **Accuracy**          | 53.92%        | 51.31%  |
+| **Sensitivity**       | 52.33%        | 49.11%  |
+| **Specificity**       | 54.69%        | 52.36%  |
+| **Kappa**             | 0.0626        | 0.0131  |
+| **Balanced Accuracy** | 53.51%        | 50.74%  |
+
+-   Random Forest obtiene una mejor precisión global (53.92%) en comparación con XGBoost (51.31%). Aunque la diferencia no es grande, XGBoost tiene un rendimiento más cercano al azar.
+
+-   XGBoost muestra peores resultados en la detección de estudiantes que mejoran (sensibilidad 49.11% vs. 52.33% en RF), lo que significa que tiene más dificultad para identificar correctamente a los estudiantes que efectivamente mejoraron su rendimiento.
+
+-   El coeficiente Kappa de XGBoost es muy bajo (0.0131), indicando que su capacidad de clasificación es prácticamente aleatoria. Esto sugiere que el modelo no está logrando captar patrones significativos en los datos.
+
+-   Ambos modelos presentan dificultades para diferenciar correctamente a los estudiantes que mejoran y los que no.
+
+#### Calcular AUC y curva ROC
 
 ```{r}
 # Calcular probabilidades de predicción
@@ -1894,6 +1975,14 @@ print("Matriz de Confusión:")
 print(tree_conf_matrix)
 
 ```
+
+| **Métrica**                   | **Valor** |
+|-------------------------------|-----------|
+| **Precisión (Accuracy)**      | 66.13%    |
+| **Verdaderos Negativos (TN)** | 1227      |
+| **Falsos Positivos (FP)**     | 78        |
+| **Verdaderos Positivos (TP)** | 38        |
+| **Falsos Negativos (FN)**     | 570       |
 
 -   Tenemos un rendimiento moderado(66.13%).
 -   Clase 0 (No mejoró):
@@ -2071,7 +2160,7 @@ animate(
   animated_plot,
   width = 800,
   height = 600,
-  duration = 12,
+  duration = 20,
   fps = 20,
   renderer = gifski_renderer()
 )
