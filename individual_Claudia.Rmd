@@ -284,152 +284,7 @@ ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
 
 ## PARTE 2  Data Augmentation con Ruido Controlado
 
-```{r}
-library(tidyverse)
-library(caret)
-library(randomForest)
-library(e1071)
-library(ggplot2)
-library(xgboost)
 
-# -------------------------------
-# 1️⃣ Cargar los datos
-# -------------------------------
-df_cleaned <- read.csv("data/df_cleaned.csv")
-
-df_cleaned_c <- df_cleaned %>%
-  select(-Previous_Scores_Category)  # Eliminamos una variable no utilizada
-
-# -------------------------------
-# 2️⃣ Data Augmentation con Ruido Controlado
-# -------------------------------
-set.seed(123)
-df_augmented <- df_cleaned_c %>% mutate(
-  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd(df_cleaned_c$Exam_Score) * 0.05)  # Menos ruido para mejorar estabilidad
-)
-
-# Limitar valores a 55-100
-df_augmented$Exam_Score <- pmax(pmin(df_augmented$Exam_Score, 100), 55)
-
-# -------------------------------
-# 3️⃣ Feature Engineering Mejorado
-# -------------------------------
-df_augmented <- df_augmented %>% mutate(
-  study_sleep_ratio = scale(Hours_Studied / (Sleep_Hours + 1)),
-  motivated_study = scale(Hours_Studied * Motivation_Level),
-  parent_peer_influence = scale(Parental_Involvement * Peer_Influence),
-  distance_category = case_when(
-    Distance_from_Home < quantile(Distance_from_Home, 0.33) ~ "Cerca",
-    Distance_from_Home < quantile(Distance_from_Home, 0.66) ~ "Media",
-    TRUE ~ "Lejos"
-  ),
-  study_group = case_when(
-    Hours_Studied < quantile(Hours_Studied, 0.33) ~ "Bajo",
-    Hours_Studied < quantile(Hours_Studied, 0.66) ~ "Medio",
-    TRUE ~ "Alto"
-  ),
-  high_access_to_resources = ifelse(Access_to_Resources > mean(Access_to_Resources, na.rm = TRUE), 1, 0),
-  social_influence = scale(Peer_Influence + Parental_Involvement + Teacher_Quality)
-)
-
-# Convertir variables categóricas a factores
-df_augmented$distance_category <- as.factor(df_augmented$distance_category)
-df_augmented$study_group <- as.factor(df_augmented$study_group)
-
-# -------------------------------
-# 4️⃣ Definir Variables Predictoras
-# -------------------------------
-target_variable <- "Exam_Score"
-all_variables <- names(df_augmented)
-predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
-print(predictor_variables)
-
-# -------------------------------
-# 5️⃣ División en Train/Test
-# -------------------------------
-set.seed(123)
-trainIndex <- createDataPartition(df_augmented$Exam_Score, p = 0.8, list = FALSE)
-train_data <- df_augmented[trainIndex, ]
-test_data <- df_augmented[-trainIndex, ]
-
-# -------------------------------
-# 6️⃣ Modelos de Machine Learning Optimizados
-# -------------------------------
-set.seed(123)
-
-# 📌 Random Forest con ajuste de hiperparámetros
-rf_grid <- expand.grid(mtry = seq(2, length(predictor_variables), by = 2))
-rf_model <- train(
-  Exam_Score ~ ., data = train_data,
-  method = "rf",
-  tuneGrid = rf_grid,
-  trControl = trainControl(method = "cv", number = 5, search = "grid"),
-  importance = TRUE
-)
-rf_pred <- predict(rf_model, newdata = test_data)
-r2_rf <- R2(rf_pred, test_data$Exam_Score)
-
-# 📌 Regresión Lineal Mejorada con Selección de Variables
-lm_model <- train(
-  Exam_Score ~ ., data = train_data,
-  method = "lm",
-  trControl = trainControl(method = "cv", number = 5)
-)
-lm_pred <- predict(lm_model, newdata = test_data)
-r2_lm <- R2(lm_pred, test_data$Exam_Score)
-
-# 📌 SVR con ajuste de hiperparámetros
-svr_model <- train(
-  Exam_Score ~ ., data = train_data,
-  method = "svmRadial",
-  trControl = trainControl(method = "cv", number = 5),
-  preProcess = c("center", "scale"),
-  tuneLength = 10
-)
-svr_pred <- predict(svr_model, newdata = test_data)
-r2_svr <- R2(svr_pred, test_data$Exam_Score)
-
-# 📌 XGBoost para Comparación con ajuste de hiperparámetros
-xgb_model <- train(
-  Exam_Score ~ ., data = train_data,
-  method = "xgbTree",
-  trControl = trainControl(method = "cv", number = 5),
-  tuneGrid = expand.grid(
-    nrounds = 100,
-    max_depth = 6,
-    eta = 0.3,
-    gamma = 0,
-    colsample_bytree = 1,
-    min_child_weight = 1,
-    subsample = 1
-  )
-)
-xgb_pred <- predict(xgb_model, newdata = test_data)
-r2_xgb <- R2(xgb_pred, test_data$Exam_Score)
-
-# -------------------------------
-# 7️⃣ Comparación de Modelos Mejorados
-# -------------------------------
-results_optimized <- data.frame(Modelo = c("Random Forest", "Regresión Lineal", "SVR", "XGBoost"),
-                                R2 = c(r2_rf, r2_lm, r2_svr, r2_xgb))
-print(results_optimized)
-
-# -------------------------------
-# 8️⃣ Importancia de Variables en RF
-# -------------------------------
-importance_df <- data.frame(
-  Variable = rownames(importance(rf_model$finalModel)),
-  Importance = importance(rf_model$finalModel)[, 1]
-)
-importance_df <- importance_df[order(importance_df$Importance, decreasing = TRUE), ]
-
-# Gráfico
-ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  coord_flip() +
-  labs(title = "Importancia de las Variables en Random Forest", x = "Variable", y = "Incremento en MSE") +
-  theme_minimal()
-```
 
 
 
@@ -690,83 +545,150 @@ ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
 
 ```
 
-## DASHBOARD
+## PREGUNAT 2 CON DASHBOARD
+
 ```{r}
 library(shiny)
 library(tidyverse)
 library(caret)
-library(randomForest)
 library(ggplot2)
 library(plotly)
 
-# Cargar el mejor modelo entrenado (Random Forest o el que haya funcionado mejor)
-load("best_model_rf.RData")  # Asegurar que el modelo está guardado como 'rf_model'
+# -------------------------------
+# 1️⃣ Cargar los datos
+# -------------------------------
+df_cleaned <- read.csv("data/df_cleaned.csv")
+
+df_cleaned_c <- df_cleaned %>%
+  select(-Previous_Scores_Category)
+
+# -------------------------------
+# 2️⃣ Data Augmentation con Ruido Controlado
+# -------------------------------
+set.seed(123)
+df_augmented <- df_cleaned_c %>% mutate(
+  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd(df_cleaned_c$Exam_Score) * 0.1)
+)
+
+# Limitar valores a 55-100
+df_augmented$Exam_Score <- pmax(pmin(df_augmented$Exam_Score, 100), 55)
+
+# Imprimir desviación estándar después de agregar ruido
+cat("Desviación estándar después de agregar ruido:", sd(df_augmented$Exam_Score), "\n")
+
+# -------------------------------
+# 3️⃣ Feature Engineering
+# -------------------------------
+df_augmented <- df_augmented %>% mutate(
+  study_sleep_ratio = as.numeric(scale(Hours_Studied / (Sleep_Hours + 1))),
+  motivated_study = as.numeric(scale(Hours_Studied * Motivation_Level)),
+  parent_peer_influence = as.numeric(scale(Parental_Involvement * Peer_Influence)),
+  distance_category = as.factor(case_when(
+    Distance_from_Home < quantile(Distance_from_Home, 0.33) ~ "Cerca",
+    Distance_from_Home < quantile(Distance_from_Home, 0.66) ~ "Media",
+    TRUE ~ "Lejos"
+  )),
+  study_group = as.factor(case_when(
+    Hours_Studied < quantile(Hours_Studied, 0.33) ~ "Bajo",
+    Hours_Studied < quantile(Hours_Studied, 0.66) ~ "Medio",
+    TRUE ~ "Alto"
+  )),
+  high_access_to_resources = as.factor(ifelse(Access_to_Resources > mean(Access_to_Resources, na.rm = TRUE), 1, 0)),
+  social_influence = as.numeric(scale(Peer_Influence + Parental_Involvement + Teacher_Quality))
+)
+
+# -------------------------------
+# 4️⃣ Definir Variables Predictoras
+# -------------------------------
+target_variable <- "Exam_Score"
+all_variables <- names(df_augmented)
+predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
+print(predictor_variables)
+
+# -------------------------------
+# 5️⃣ División en Train/Test
+# -------------------------------
+set.seed(123)
+trainIndex <- createDataPartition(df_augmented$Exam_Score, p = 0.8, list = FALSE)
+train_data <- df_augmented[trainIndex, ]
+test_data <- df_augmented[-trainIndex, ]
+
+# -------------------------------
+# 6️⃣ Modelo de Regresión Lineal
+# -------------------------------
+set.seed(123)
+lm_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5)
+)
+
+lm_pred <- predict(lm_model, newdata = test_data)
+r2_lm <- R2(lm_pred, test_data$Exam_Score)
+
+# Guardar el modelo de Regresión Lineal
+save(lm_model, file = "best_model_lm.RData")
+
+
+
+
+
+```
+
+
+```{r}
+# -------------------------------
+# 7️⃣ Dashboard en Shiny
+# -------------------------------
+load("best_model_lm.RData")
 
 # UI - Interfaz de Usuario
 iu <- fluidPage(
   titlePanel("Predicción de Nota en el Examen"),
-  
   sidebarLayout(
     sidebarPanel(
       h4("Ingrese sus datos para predecir su nota"),
-      sliderInput("hours_studied", "Horas de estudio", min = 0, max = 10, value = 5),
-      sliderInput("motivation_level", "Nivel de Motivación (1-10)", min = 1, max = 10, value = 5),
-      sliderInput("sleep_hours", "Horas de Sueño", min = 0, max = 12, value = 7),
-      sliderInput("parental_involvement", "Involucramiento Parental (1-10)", min = 1, max = 10, value = 5),
-      sliderInput("peer_influence", "Influencia de Amigos (1-10)", min = 1, max = 10, value = 5),
-      sliderInput("previous_scores", "Nota anterior", min = 50, max = 100, value = 75),
+      lapply(predictor_variables, function(var) {
+        if (var %in% c("distance_category", "study_group", "high_access_to_resources")) {
+          selectInput(var, var, choices = unique(df_augmented[[var]]))
+        } else {
+          sliderInput(var, var, min = min(df_augmented[[var]], na.rm = TRUE), max = max(df_augmented[[var]], na.rm = TRUE), value = mean(df_augmented[[var]], na.rm = TRUE))
+        }
+      }),
       actionButton("predict", "Predecir Nota", class = "btn-primary")
     ),
-    
     mainPanel(
       h3("Predicción de su Nota"),
-      verbatimTextOutput("predicted_score"),
-      plotlyOutput("score_distribution"),
-      h4("Comparación con otros estudiantes"),
-      plotlyOutput("comparison_plot")
+      verbatimTextOutput("predicted_score")
     )
   )
 )
 
 # Server - Lógica del Dashboard
 server <- function(input, output) {
-  
   predicted_score <- eventReactive(input$predict, {
     input_data <- data.frame(
-      Hours_Studied = input$hours_studied,
-      Motivation_Level = input$motivation_level,
-      Sleep_Hours = input$sleep_hours,
-      Parental_Involvement = input$parental_involvement,
-      Peer_Influence = input$peer_influence,
-      Previous_Scores = input$previous_scores
+      lapply(predictor_variables, function(var) {
+        if (var %in% c("distance_category", "study_group", "high_access_to_resources")) {
+          as.factor(input[[var]])
+        } else {
+          as.numeric(input[[var]])
+        }
+      })
     )
-    predict(rf_model, newdata = input_data)
+    colnames(input_data) <- predictor_variables
+    print(input_data)
+    predict(lm_model, newdata = input_data)
   })
   
   output$predicted_score <- renderText({
     paste("Su nota estimada en el próximo examen es:", round(predicted_score(), 2))
   })
-  
-  output$score_distribution <- renderPlotly({
-    plot_ly(x = df_cleaned_c$Exam_Score, type = "histogram", nbinsx = 30,
-            marker = list(color = "blue")) %>%
-      layout(title = "Distribución de Notas Previas",
-             xaxis = list(title = "Nota"),
-             yaxis = list(title = "Frecuencia"))
-  })
-  
-  output$comparison_plot <- renderPlotly({
-    df_sample <- df_cleaned_c %>% sample_n(300)  # Muestra de datos reales
-    plot_ly(df_sample, x = ~Hours_Studied, y = ~Exam_Score, type = "scatter", mode = "markers",
-            marker = list(size = 8, color = "rgba(0, 150, 255, 0.6)")) %>%
-      add_markers(x = input$hours_studied, y = predicted_score(), marker = list(size = 10, color = "red")) %>%
-      layout(title = "Comparación con otros estudiantes",
-             xaxis = list(title = "Horas de Estudio"),
-             yaxis = list(title = "Nota en el Examen"))
-  })
 }
 
 shinyApp(ui = iu, server = server)
-
 ```
+
+
+
 
