@@ -1654,7 +1654,7 @@ ggplot(df_cleaned, aes(x = Previous_Scores)) +
 
 `Exam_Score` tiene **poca variabilidad**, con la mayoría de los estudiantes en el rango de **60 a 75 puntos**. `Previous_Scores` tiene una distribución más uniforme, lo que sugiere que podría ser una mejor variable predictora. Debido a la baja variabilidad en Exam_Score, utilizarlo directamente como variable objetivo podría no ser eficaz. Por ello, decidimos crear una variable categórica que represente mejor el rendimiento académico.
 
-#### Modelo Predictivo
+### Modelo Predictivo
 
 El objetivo del modelo será predecir según distintos factores, si el alumno mejorará su rendimiento o no.
 
@@ -1670,7 +1670,6 @@ table(df_cleaned$Improved)
 prop.table(table(df_cleaned$Improved))
 ```
 
-## Distribución de la Variable Objetivo (`Improved`)
 
 | Clase             | Frecuencia | Proporción |
 |-------------------|------------|------------|
@@ -1883,7 +1882,7 @@ Conclusión: - Un modelo bueno debería tener una curva más inclinada hacia la 
 
 #### Importancia de Variables
 
-Una vez validado el modelo, vamos a determinar cuales son las variables mas importantes que influyen en la predicción de la mejora del estudiante.
+Usando el mejor (Random Forest) y una vez validado el modelo, vamos a determinar cuales son las variables mas importantes que influyen en la predicción de la mejora del estudiante. 
 
 ```{r}
 # Importancia de variables
@@ -1898,6 +1897,8 @@ plot(var_imp, top = 11, main = "Importancia de Variables")
 -   Hours_Studied (Horas de Estudio): Aunque es importante, su impacto es menor que la asistencia y la calidad docente, lo que sugiere que ir a clases y recibir una buena enseñanza es más relevante que solo estudiar muchas horas.
 
 #### Arbol de decision
+
+Una vez vistas las variables mas importantes, a continuación se construirá un árbol de decisión usando dichas variables. 
 
 ```{r}
 # Instalar paquetes si no están instalados
@@ -1992,7 +1993,7 @@ print(tree_conf_matrix)
     -   38 casos fueron correctamente identificados como que mejoraron (verdaderos positivos).
     -   570 casos fueron mal clasificados como que no mejoraron (falsos negativos).
 
-####Visualización árbol de decisión
+## Visualización
 
 ```{r}
 # Visualizar el Árbol de Decisión Optimizado con mejores ajustes
@@ -2022,6 +2023,8 @@ En los siguientes niveles del árbol, variables como calidad docente (Teacher_Qu
 ```{r}
 print(tree_model)
 ```
+Para mejorar el entendimiento pueden observarse las siguientes reglas:
+
 
 ```{r}
 # Función para extraer las reglas del árbol
@@ -2035,6 +2038,56 @@ rules <- extract_rules(tree_model)
 rules
 
 ```
+
+* Nodo: Identificador del nodo en el árbol.
+* División: Variable utilizada para dividir los datos en cada nodo.
+* n: Cantidad de observaciones en el nodo.
+* Pérdida: Número de observaciones mal clasificadas en ese nodo.
+* Clase Predicha: Clase dominante en el nodo (0 o 1).
+* Probabilidad (0,1): Distribución de probabilidades de cada clase.
+Los nodos marcados con * son terminales, es decir, ya no se dividen más en el árbol de decisión.
+
+
+| Nodo | División | n | Pérdida | Clase Predicha | Probabilidad (0,1) |
+|------|----------|----|---------|---------------|---------------------|
+| 1    | Raíz    | 4465 | 1465 | 0 | (0.6719, 0.3281) |
+| 2    | Attendance < 79.5 | 2144 | 578 | 0 | (0.7304, 0.2696) * |
+| 3    | Attendance >= 79.5 | 2321 | 887 | 0 | (0.6178, 0.3822) |
+| 6    | Parental_Involvement < 2.5 | 1627 | 579 | 0 | (0.6441, 0.3559) |
+| 12   | Attendance < 86.5 | 529 | 165 | 0 | (0.6881, 0.3119) * |
+| 13   | Attendance >= 86.5 | 1098 | 414 | 0 | (0.6230, 0.3770) |
+| 26   | Teacher_Quality < 1.5 | 123 | 33 | 0 | (0.7317, 0.2683) |
+| 52   | Parental_Education_Level < 1.5 | 61 | 10 | 0 | (0.8361, 0.1639) |
+| 104  | Tutoring_Sessions >= 1.5 | 25 | 1 | 0 | (0.9600, 0.0400) * |
+| 105  | Tutoring_Sessions < 1.5 | 36 | 9 | 0 | (0.7500, 0.2500) |
+| 210  | Attendance < 96.5 | 31 | 5 | 0 | (0.8387, 0.1613) * |
+| 211  | Attendance >= 96.5 | 5 | 1 | 1 | (0.2000, 0.8000) * |
+| 53   | Parental_Education_Level >= 1.5 | 62 | 23 | 0 | (0.6290, 0.3710) |
+| 214  | Hours_Studied < 26.5 | 35 | 13 | 0 | (0.6286, 0.3714) |
+| 428  | Attendance < 95.5 | 20 | 4 | 0 | (0.8000, 0.2000) * |
+| 429  | Attendance >= 95.5 | 15 | 6 | 1 | (0.4000, 0.6000) * |
+| 215  | Hours_Studied >= 26.5 | 7 | 1 | 1 | (0.1429, 0.8571) * |
+| 27   | Teacher_Quality >= 1.5 | 975 | 381 | 0 | (0.6092, 0.3908) |
+| 54   | Motivation_Level < 1.5 | 278 | 94 | 0 | (0.6619, 0.3381) |
+| 218  | Hours_Studied < 18.5 | 104 | 28 | 0 | (0.7308, 0.2692) * |
+| 219  | Hours_Studied >= 18.5 | 150 | 65 | 0 | (0.5667, 0.4333) |
+| 438  | Peer_Influence >= 2.5 | 67 | 20 | 0 | (0.7015, 0.2985) * |
+| 439  | Peer_Influence < 2.5 | 83 | 38 | 1 | (0.4578, 0.5422) * |
+| 7    | Parental_Involvement >= 2.5 | 694 | 308 | 0 | (0.5562, 0.4438) |
+| 14   | Hours_Studied < 29.5 | 648 | 280 | 0 | (0.5679, 0.4321) |
+| 28   | Distance_from_Home >= 2.5 | 62 | 19 | 0 | (0.6935, 0.3065) |
+| 56   | Attendance >= 83.5 | 53 | 14 | 0 | (0.7358, 0.2642) * |
+| 57   | Attendance < 83.5 | 9 | 4 | 1 | (0.4444, 0.5556) |
+| 115  | Attendance >= 80.5 | 7 | 2 | 1 | (0.2857, 0.7143) * |
+| 15   | Hours_Studied >= 29.5 | 46 | 18 | 1 | (0.3913, 0.6087) |
+| 30   | Extracurricular_Activities < 0.5 | 13 | 5 | 0 | (0.6154, 0.3846) |
+| 60   | Motivation_Level >= 1.5 | 11 | 3 | 0 | (0.7273, 0.2727) * |
+| 31   | Extracurricular_Activities >= 0.5 | 33 | 10 | 1 | (0.3030, 0.6970) |
+| 62   | Tutoring_Sessions < 2.5 | 25 | 10 | 1 | (0.4000, 0.6000) |
+| 125  | Parental_Education_Level >= 1.5 | 12 | 2 | 1 | (0.1667, 0.8333) * |
+| 63   | Tutoring_Sessions >= 2.5 | 8 | 0 | 1 | (0.0000, 1.0000) * |
+
+
 
 -   La asistencia (Attendance) es el factor más determinante en la mejora académica.
 
@@ -2075,6 +2128,11 @@ rules
     -   Si no participa en actividades extracurriculares y su asistencia es \< 94.5%, la probabilidad de mejora baja al 42.31%.
 
 -   Los estudiantes con Attendance ≥ 99.5% y al menos 7.5 horas de estudio tienen una probabilidad de mejora del 100%.
+
+
+### Animación
+
+El objetivo principal es visualizar el proceso de clasificación de los estudiantes en el árbol de decisión, permitiendo ver cómo la asistencia, el involucramiento parental y las horas de estudio influyen en la predicción de si un estudiante mejorará o no.
 
 ```{r}
 # Cargar librerías necesarias
@@ -2168,25 +2226,31 @@ anim_save("arbol_decision_animado.gif")
 
 ```
 
-🔍 ¿Para qué sirve este código y la animación generada?
 
-El objetivo principal de este código es visualizar el proceso de clasificación de los estudiantes en el árbol de decisión, permitiendo ver cómo la asistencia, el involucramiento parental y las horas de estudio influyen en la predicción de si un estudiante mejorará o no.
+• Cada punto representa un estudiante. 
+• El eje X muestra el porcentaje de asistencia. 
+• El eje Y representa las horas de estudio por semana. 
+• El color indica la etapa del árbol en la que se encuentra cada estudiante. 
+• El tipo de marcador (círculo o triángulo) indica si el estudiante mejoró o no.
 
-📌 Lo que representa la animación: • Cada punto representa un estudiante. • El eje X muestra el porcentaje de asistencia. • El eje Y representa las horas de estudio por semana. • El color indica la etapa del árbol en la que se encuentra cada estudiante. • El tipo de marcador (círculo o triángulo) indica si el estudiante mejoró o no.
+• La animación recorre las diferentes etapas del árbol de decisión, mostrando cómo los estudiantes son clasificados progresivamente según sus características. 
+• En cada etapa, el gráfico se enfoca en los estudiantes que cumplen con los criterios de división del árbol.
 
-📌 Cómo funciona la animación: • La animación recorre las diferentes etapas del árbol de decisión, mostrando cómo los estudiantes son clasificados progresivamente según sus características. • En cada etapa, el gráfico se enfoca en los estudiantes que cumplen con los criterios de división del árbol.
 
-📊 ¿Qué información útil podemos extraer?
+• La primera división del árbol ocurre en Attendance \< 79.5%, lo que indica que la asistencia es un factor clave en la mejora del rendimiento. • Los estudiantes con baja asistencia (rojo) parecen menos propensos a mejorar.
 
-1️⃣ Importancia de la asistencia: • La primera división del árbol ocurre en Attendance \< 79.5%, lo que indica que la asistencia es un factor clave en la mejora del rendimiento. • Los estudiantes con baja asistencia (rojo) parecen menos propensos a mejorar.
+• La segunda y tercera división se basan en Parental_Involvement \< 2.5 y Hours_Studied \< 29.5, lo que sugiere que la combinación de apoyo familiar y tiempo de estudio es crucial.
 
-2️⃣ Involucramiento parental y horas de estudio: • La segunda y tercera división se basan en Parental_Involvement \< 2.5 y Hours_Studied \< 29.5, lo que sugiere que la combinación de apoyo familiar y tiempo de estudio es crucial.
+• Se observa una concentración de estudiantes que no mejoraron (círculos) en ciertas etapas tempranas del árbol, mientras que en otras se encuentran más estudiantes que sí mejoraron (triángulos). 
 
-3️⃣ Predicción visual del desempeño: • Se observa una concentración de estudiantes que no mejoraron (círculos) en ciertas etapas tempranas del árbol, mientras que en otras se encuentran más estudiantes que sí mejoraron (triángulos). • En etapas finales, se pueden identificar subconjuntos donde la mejora es más probable, lo que sugiere estrategias de intervención.
+• En etapas finales, se pueden identificar subconjuntos donde la mejora es más probable, lo que sugiere estrategias de intervención.
 
-🚀 Conclusión
 
-Esta animación permite visualizar de manera intuitiva cómo el modelo de árbol de decisión clasifica a los estudiantes en función de variables clave. También ayuda a identificar patrones, como: ✅ Factores críticos para la mejora (asistencia, apoyo parental, horas de estudio). ✅ Áreas de intervención (grupos de estudiantes que podrían beneficiarse de tutorías o estrategias de motivación). ✅ Diferencias entre los estudiantes que mejoran y los que no, lo que puede ayudar a proponer soluciones personalizadas.
+### Árbol Interactivo
+
+Para ir más allá se ha generado una visualización interactiva: 
+
+Esta visualización es igual que la animación anterior, pero con la diferencia de poder elegir la etapa y la condición que queramos visualizar en el árbol de decisión.
 
 ```{r}
 # Cargar librerías necesarias
@@ -2196,21 +2260,10 @@ library(dplyr)
 library(tibble)
 library(forcats)
 
-# 1️⃣ Añadir un identificador único para cada estudiante
-#Hecho Antes en el GIFT Animado
-
-# 2️⃣ Convertir 'Improved' en una variable categórica con etiquetas
-#Hecho Antes en el GIFT Animado
-
-# 3️⃣ Asignar a cada fila del dataset su etapa en el árbol
-#Hecho Antes en el GIFT Animado
 
 testData_interactive <- assign_tree_steps(testData)
 
-# 4️⃣ Definir colores para cada etapa y formas para 'Improved'
-#Hecho Antes en el GIFT Animado
-
-# 5️⃣ Crear el gráfico interactivo con ggplot2
+# Crear el gráfico interactivo con ggplot2
 plot <- ggplot(testData_interactive, aes(
   x = Attendance, y = Hours_Studied, 
   color = step, 
@@ -2243,3 +2296,49 @@ interactive_plot <- ggplotly(plot, tooltip = "text") %>%
 # 7️⃣ Mostrar el gráfico interactivo
 interactive_plot
 ```
+
+## Coclusiones
+
+A lo largo del análisis, hemos explorado distintos enfoques de modelado para predecir si un estudiante mejorará su rendimiento académico. Sin embargo, los resultados obtenidos han sido poco satisfactorios. A pesar de probar diferentes técnicas, como Random Forest, XGBoost y Árboles de Decisión (aunque este último ha sido usado con resultados de RF), ninguno de los modelos ha logrado capturar patrones significativos en los datos.
+
+Desde el inicio, el conjunto de datos presentaba una fuerte desbalance en las clases, con solo 32.5% de los estudiantes mostrando una mejora. Para abordar este problema, aplicamos submuestreo para equilibrar las clases y evitar que el modelo se inclinara a predecir mayoritariamente "No Mejoró". Sin embargo, incluso tras este ajuste, los modelos no lograron generar predicciones precisa:
+
+| Métrica               | Random Forest | XGBoost |
+|-----------------------|---------------|---------|
+| **Accuracy**          | 53.92%        | 51.31%  |
+| **Sensitivity**       | 52.33%        | 49.11%  |
+| **Specificity**       | 54.69%        | 52.36%  |
+| **Kappa**             | 0.0626        | 0.0131  |
+| **Balanced Accuracy** | 53.51%        | 50.74%  |
+
+| **Métrica**                   | Árbol de Decisión |
+|-------------------------------|-----------|
+| **Precisión (Accuracy)**      | 66.13%    |
+| **Verdaderos Negativos (TN)** | 1227      |
+| **Falsos Positivos (FP)**     | 78        |
+| **Verdaderos Positivos (TP)** | 38        |
+| **Falsos Negativos (FN)**     | 570       |
+
+Dado el desempeño decepcionante de los modelos, nos preguntamos si el problema radica en los datos en sí. Algunas hipótesis son:
+
+Los datos pueden no reflejar relaciones reales entre las variables:
+
+  La importancia de la asistencia y las horas de estudio parece lógica, pero los modelos no lograron aprovechar esta información para hacer buenas predicciones.
+  Otras variables, como el nivel educativo de los padres o la motivación, podrían no estar bien medidas o no ser representativas del rendimiento real.
+
+La calidad de los datos es incierta
+
+  No hemos podido verificar si los datos provienen de una fuente confiable.
+  Si los datos han sido generados sintéticamente o contienen errores de recolección, esto explicaría por qué los modelos no encuentran patrones claros.
+  La alta correlación entre algunas variables puede haber introducido ruido en las predicciones.
+
+Faltan características importantes para predecir el rendimiento académico
+
+  Puede que haya factores más determinantes, como la salud mental de los estudiantes, acceso a recursos educativos, o métodos de enseñanza, que no fueron considerados en este conjunto de datos.
+  El rendimiento académico puede estar influenciado por múltiples variables externas que no están reflejadas en este dataset.
+
+Como reflexión final, dado que hemos probado múltiples enfoques sin éxito, podríamos cuestionarnos la validez de los datos utilizados.
+No hemos podido verificar con certeza si los datos son reales o sintéticos, lo que deja abierta la posibilidad de que las relaciones esperadas en un contexto educativo real no estén correctamente reflejadas en esta información.
+
+En escenarios reales, antes de seguir optimizando modelos con datos de baja calidad, sería recomendable evaluar la fuente de los datos y la manera en que fueron recolectados.
+Si los datos fueran correctos, pero incompletos, se necesitaría recopilar información adicional para mejorar la capacidad predictiva de los modelos.
