@@ -3657,6 +3657,7 @@ Para entender mejor la distribución de las calificaciones, se generaron histogr
 Objetivo: Entender la distribución de las calificaciones actuales (Exam_Score) y previas (Previous_Scores) para determinar si son adecuadas como variables objetivo.
 
 ```{r}
+df_cleaned <- read.csv("data/df_cleaned.csv")
 # Distribución de Exam_Score
 ggplot(df_cleaned, aes(x = Exam_Score)) +
   geom_histogram(bins = 20, fill = "blue", alpha = 0.7) +
@@ -3796,6 +3797,7 @@ print(conf_mat)
 
 -   Kappa: Valor de 0.0626, sugiere un bajo nivel de acuerdo entre la predicción del modelo y la realidad, indicando que el modelo no está logrando una clasificación efectiva más allá del azar.
 
+La sensibilidad y especificidad son bajas, lo que significa que el modelo no diferencia bien entre los estudiantes que mejoraron y los que no.
 El modelo tiene un bajo rendimiento, con una precisión cercana al azar (~54%), lo que indica que no está capturando bien los patrones en los datos.
 
 ```{r}
@@ -3812,6 +3814,14 @@ print(paste("AUC:", auc_value))
 plot.roc(roc_obj, main = "Curva ROC - Random Forest")
 
 ```
+- Eje X (1 - Especificidad): Representa la tasa de falsos positivos (cuando el modelo predice erróneamente que un estudiante mejoró).
+- Eje Y (Sensibilidad): Representa la tasa de verdaderos positivos (cuando el modelo predice correctamente que un estudiante mejoró).
+- Línea diagonal (gris): Representa una predicción aleatoria (AUC = 0.5).
+- La curva negra: Está muy cerca de la diagonal, lo que indica que el modelo no está realizando predicciones significativamente mejores que el azar.
+
+Conclusión:
+- Un modelo bueno debería tener una curva más inclinada hacia la esquina superior izquierda, indicando una alta tasa de verdaderos positivos y una baja tasa de falsos positivos.
+- En este caso, la curva sigue muy de cerca la diagonal, lo que sugiere que el modelo no tiene una buena capacidad predictiva.
 
 #### Importancia de Variables
 
@@ -3822,9 +3832,12 @@ Una vez validado el modelo, vamos a determinar cuales son las variables mas impo
 var_imp <- varImp(rf_model)
 plot(var_imp, top = 11, main = "Importancia de Variables")
 
+
 ```
 
-Como podemos observar, las variables más importantes son, la atención y la calidad del profesor.
+- Attendance (Asistencia): Es la variable más importante, lo que sugiere que los estudiantes con mayor asistencia tienen más probabilidades de mejorar su rendimiento.
+- Teacher_Quality (Calidad del Profesorado): Indica que la calidad del docente impacta significativamente en el aprendizaje y en la mejora del estudiante.
+- Hours_Studied (Horas de Estudio): Aunque es importante, su impacto es menor que la asistencia y la calidad docente, lo que sugiere que ir a clases y recibir una buena enseñanza es más relevante que solo estudiar muchas horas.
 
 #### Arbol de decision
 
@@ -3834,12 +3847,15 @@ if (!require("rpart")) install.packages("rpart", dependencies=TRUE)
 if (!require("rpart.plot")) install.packages("rpart.plot", dependencies=TRUE)
 if (!require("caret")) install.packages("caret", dependencies=TRUE)
 
-# Cargar las librerías necesarias
+# Cargar las librerías necesarias para construir y visualizar un Árbol de decisión
 library(rpart)
 library(rpart.plot)
 library(caret)
 
 ```
+
+- Se seleccionan las variables más importantes identificadas previamente en el análisis de importancia de variables.
+- Estas variables serán usadas para construir el Árbol de Decisión.
 
 ```{r}
 # Definir las variables más importantes según análisis previo
@@ -3849,6 +3865,9 @@ important_vars <- c("Attendance", "Teacher_Quality", "Hours_Studied",
                     "Internet_Access", "Parental_Education_Level", "Extracurricular_Activities")
 
 ```
+
+- Se define X (las variables predictoras) y y (la variable objetivo Improved).
+- Se divide el conjunto de datos en 70% entrenamiento y 30% prueba manteniendo la proporción original de clases.
 
 ```{r}
 # Definir la variable objetivo y las variables predictoras
@@ -3863,6 +3882,10 @@ testData  <- df_cleaned[-trainIndex, ]
 
 ```
 
+- Entrenamos el Árbol de decisión
+- minsplit = 5 - Un nodo necesita al menos 5 observaciones para dividirse.
+- maxdepth = 8 - Limita la profundidad del árbol para evitar que sea demasiado complejo.
+
 ```{r}
 # Entrenar el Árbol de Decisión con hiperparámetros ajustados
 tree_model <- rpart(Improved ~ ., 
@@ -3871,6 +3894,9 @@ tree_model <- rpart(Improved ~ .,
                     control = rpart.control(cp = 0.001, minsplit = 5, maxdepth = 8))
 
 ```
+
+- Genera predicciones en el conjunto de prueba usando el modelo entrenado.
+- type = "class" asegura que la salida sean clases binarias (0 o 1) y no probabilidades.
 
 ```{r}
 # Hacer predicciones con los datos de prueba
@@ -3891,7 +3917,15 @@ print("Matriz de Confusión:")
 print(tree_conf_matrix)
 
 ```
+- Tenemos un rendimiento moderado(66.13%).
+- Clase 0 (No mejoró):
+  - 1227 casos fueron correctamente clasificados (verdaderos negativos).
+	- 78 casos fueron mal clasificados como que sí mejoraron (falsos positivos).
+- Clase 1 (Mejoró):
+	- 38 casos fueron correctamente identificados como que mejoraron (verdaderos positivos).
+	- 570 casos fueron mal clasificados como que no mejoraron (falsos negativos).
 
+###Visualización árbol de decisión
 ```{r}
 # Visualizar el Árbol de Decisión Optimizado con mejores ajustes
 rpart.plot(tree_model, 
@@ -3904,6 +3938,18 @@ rpart.plot(tree_model,
            main = "Árbol de Decisión Optimizado con Variables Clave")
 
 ```
+El primer nodo del árbol indica que la asistencia (Attendance) es el factor más determinante en la mejora académica. Esto significa que la asistencia es el factor más relevante para predecir si un estudiante mejorará o no su rendimiento.
+
+En los siguientes niveles del árbol, variables como calidad docente (Teacher_Quality), horas de estudio (Hours_Studied), y nivel educativo de los padres (Parental_Education_Level) aparecen como factores clave en la clasificación.
+
+- Patrones de Mejora y No Mejora
+	- Nodos en verde: Representan grupos de estudiantes con alta probabilidad de mejora.
+	- Nodos en rojo: Representan estudiantes con baja probabilidad de mejora, lo que indica que las condiciones previas en esas ramas no favorecen el rendimiento académico.
+	- Nodos en amarillo: Representan puntos de decisión en los que todavía existen condiciones mixtas que pueden influir en el resultado final.
+
+- Interpretación de los Resultados
+	- Si un estudiante tiene alta asistencia y cuenta con buen apoyo parental, su probabilidad de mejora es mayor.
+	- Sin embargo, si un estudiante tiene baja asistencia, pocas horas de estudio y menor acceso a recursos educativos, es menos probable que mejore.
 
 ```{r}
 print(tree_model)
@@ -4054,6 +4100,41 @@ anim_save("arbol_decision_animado.gif")
 
 ```
 
+🔍 ¿Para qué sirve este código y la animación generada?
+
+El objetivo principal de este código es visualizar el proceso de clasificación de los estudiantes en el árbol de decisión, permitiendo ver cómo la asistencia, el involucramiento parental y las horas de estudio influyen en la predicción de si un estudiante mejorará o no.
+
+📌 Lo que representa la animación:
+	•	Cada punto representa un estudiante.
+	•	El eje X muestra el porcentaje de asistencia.
+	•	El eje Y representa las horas de estudio por semana.
+	•	El color indica la etapa del árbol en la que se encuentra cada estudiante.
+	•	El tipo de marcador (círculo o triángulo) indica si el estudiante mejoró o no.
+
+📌 Cómo funciona la animación:
+	•	La animación recorre las diferentes etapas del árbol de decisión, mostrando cómo los estudiantes son clasificados progresivamente según sus características.
+	•	En cada etapa, el gráfico se enfoca en los estudiantes que cumplen con los criterios de división del árbol.
+	
+📊 ¿Qué información útil podemos extraer?
+
+1️⃣ Importancia de la asistencia:
+	•	La primera división del árbol ocurre en Attendance < 79.5%, lo que indica que la asistencia es un factor clave en la mejora del rendimiento.
+	•	Los estudiantes con baja asistencia (rojo) parecen menos propensos a mejorar.
+
+2️⃣ Involucramiento parental y horas de estudio:
+	•	La segunda y tercera división se basan en Parental_Involvement < 2.5 y Hours_Studied < 29.5, lo que sugiere que la combinación de apoyo familiar y tiempo de estudio es crucial.
+
+3️⃣ Predicción visual del desempeño:
+	•	Se observa una concentración de estudiantes que no mejoraron (círculos) en ciertas etapas tempranas del árbol, mientras que en otras se encuentran más estudiantes que sí mejoraron (triángulos).
+	•	En etapas finales, se pueden identificar subconjuntos donde la mejora es más probable, lo que sugiere estrategias de intervención.
+	
+🚀 Conclusión
+
+Esta animación permite visualizar de manera intuitiva cómo el modelo de árbol de decisión clasifica a los estudiantes en función de variables clave. También ayuda a identificar patrones, como:
+✅ Factores críticos para la mejora (asistencia, apoyo parental, horas de estudio).
+✅ Áreas de intervención (grupos de estudiantes que podrían beneficiarse de tutorías o estrategias de motivación).
+✅ Diferencias entre los estudiantes que mejoran y los que no, lo que puede ayudar a proponer soluciones personalizadas.
+
 ```{r}
 # Cargar librerías necesarias
 library(ggplot2)
@@ -4063,18 +4144,18 @@ library(tibble)
 library(forcats)
 
 # 1️⃣ Añadir un identificador único para cada estudiante
-#Hecho Antes en el GIFT
+#Hecho Antes en el GIFT Animado
 
 # 2️⃣ Convertir 'Improved' en una variable categórica con etiquetas
-#Hecho Antes en el GIFT
+#Hecho Antes en el GIFT Animado
 
 # 3️⃣ Asignar a cada fila del dataset su etapa en el árbol
-#Hecho Antes en el GIFT
+#Hecho Antes en el GIFT Animado
 
 testData_interactive <- assign_tree_steps(testData)
 
 # 4️⃣ Definir colores para cada etapa y formas para 'Improved'
-#Hecho Antes en el GIFT
+#Hecho Antes en el GIFT Animado
 
 # 5️⃣ Crear el gráfico interactivo con ggplot2
 plot <- ggplot(testData_interactive, aes(
