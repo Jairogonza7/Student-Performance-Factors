@@ -1669,12 +1669,13 @@ table(df_cleaned$Improved)
 
 prop.table(table(df_cleaned$Improved))
 ```
+
 ## Distribución de la Variable Objetivo (`Improved`)
 
-| Clase | Frecuencia | Proporción |
-|-------|------------|------------|
-| **No Mejoró (0)** | 4305 | 67.50% |
-| **Mejoró (1)**    | 2073 | 32.50% |
+| Clase             | Frecuencia | Proporción |
+|-------------------|------------|------------|
+| **No Mejoró (0)** | 4305       | 67.50%     |
+| **Mejoró (1)**    | 2073       | 32.50%     |
 
 Aproximadamente el 32.5% de los estudiantes mejoraron su calificación, mientras que el 67.5% no lo hicieron.
 
@@ -1716,10 +1717,11 @@ prop.table(table(trainData$Improved))
 prop.table(table(testData$Improved))
 
 ```
-| Clase | Entrenamiento | Proporción | Prueba | Proporción |
-|-------|--------------|------------|--------|------------|
-| **No Mejoró (0)** | 4303 | 67.49% | 2002 | 67.52% |
-| **Mejoró (1)**    | 2073 | 32.51% | 965 | 32.48% |
+
+| Clase             | Entrenamiento | Proporción | Prueba | Proporción |
+|-------------------|---------------|------------|--------|------------|
+| **No Mejoró (0)** | 4303          | 67.49%     | 2002   | 67.52%     |
+| **Mejoró (1)**    | 2073          | 32.51%     | 965    | 32.48%     |
 
 Como puede observarse la distribución de clases se mantiene consistente en ambos conjuntos, lo cual es importante para obtener un modelo representativo.
 
@@ -1737,10 +1739,10 @@ table(trainData_balanced$Class)
 
 ```
 
-| Clase | Frecuencia después del Submuestreo |
-|-------|----------------------------------|
-| **No Mejoró (0)** | 1452 |
-| **Mejoró (1)**    | 1452 |
+| Clase             | Frecuencia después del Submuestreo |
+|-------------------|------------------------------------|
+| **No Mejoró (0)** | 1452                               |
+| **Mejoró (1)**    | 1452                               |
 
 Al aplicar submuestreo de la clase mayoritaria (0 - no mejoró), se equilibran las clases en el conjunto de entrenamiento. Esto permitirá que el modelo aprenda de ambas clases por igual.
 
@@ -1796,7 +1798,7 @@ print(conf_mat)
 
 La sensibilidad y especificidad son bajas, lo que significa que el modelo no diferencia bien entre los estudiantes que mejoraron y los que no. El modelo tiene un bajo rendimiento, con una precisión cercana al azar (\~54%), lo que indica que no está capturando bien los patrones en los datos.
 
-####Evaluación con xgboost
+#### Evaluación con xgboost
 
 ```{r}
 set.seed(42)
@@ -1837,25 +1839,26 @@ print(conf_mat_xgb)
 
 La sensibilidad y especificidad son bajas, lo que significa que el modelo no diferencia bien entre los estudiantes que mejoraron y los que no. El modelo tiene un bajo rendimiento, con una precisión cercana al azar (\~51%), lo que indica que no está capturando bien los patrones en los datos.
 
-####Comparación de Modelos
+#### Comparación de Modelos
 
-| Métrica              | Random Forest | XGBoost  |
-|----------------------|--------------|----------|
-| **Accuracy**        | 53.92%        | 51.31%   |
-| **Sensitivity**     | 52.33%        | 49.11%   |
-| **Specificity**     | 54.69%        | 52.36%   |
-| **Kappa**          | 0.0626        | 0.0131   |
-| **Balanced Accuracy** | 53.51%    | 50.74%   |
+| Métrica               | Random Forest | XGBoost |
+|-----------------------|---------------|---------|
+| **Accuracy**          | 53.92%        | 51.31%  |
+| **Sensitivity**       | 52.33%        | 49.11%  |
+| **Specificity**       | 54.69%        | 52.36%  |
+| **Kappa**             | 0.0626        | 0.0131  |
+| **Balanced Accuracy** | 53.51%        | 50.74%  |
 
-- Random Forest obtiene una mejor precisión global (53.92%) en comparación con XGBoost (51.31%). Aunque la diferencia no es grande, XGBoost tiene un rendimiento más cercano al azar.
+-   Random Forest obtiene una mejor precisión global (53.92%) en comparación con XGBoost (51.31%). Aunque la diferencia no es grande, XGBoost tiene un rendimiento más cercano al azar.
 
-- XGBoost muestra peores resultados en la detección de estudiantes que mejoran (sensibilidad 49.11% vs. 52.33% en RF), lo que significa que tiene más dificultad para identificar correctamente a los estudiantes que efectivamente mejoraron su rendimiento.
+-   XGBoost muestra peores resultados en la detección de estudiantes que mejoran (sensibilidad 49.11% vs. 52.33% en RF), lo que significa que tiene más dificultad para identificar correctamente a los estudiantes que efectivamente mejoraron su rendimiento.
 
-- El coeficiente Kappa de XGBoost es muy bajo (0.0131), indicando que su capacidad de clasificación es prácticamente aleatoria. Esto sugiere que el modelo no está logrando captar patrones significativos en los datos.
+-   El coeficiente Kappa de XGBoost es muy bajo (0.0131), indicando que su capacidad de clasificación es prácticamente aleatoria. Esto sugiere que el modelo no está logrando captar patrones significativos en los datos.
 
-- Ambos modelos presentan dificultades para diferenciar correctamente a los estudiantes que mejoran y los que no. 
+-   Ambos modelos presentan dificultades para diferenciar correctamente a los estudiantes que mejoran y los que no.
 
-####Calcular AUC y curva ROC
+#### Calcular AUC y curva ROC
+
 ```{r}
 # Calcular probabilidades de predicción
 prob_predictions <- predict(rf_model, newdata = testData, type = "prob")
@@ -1972,13 +1975,14 @@ print("Matriz de Confusión:")
 print(tree_conf_matrix)
 
 ```
-| **Métrica**          | **Valor**  |
-|----------------------|------------|
-| **Precisión (Accuracy)**   | 66.13%   |
-| **Verdaderos Negativos (TN)**  | 1227 |
-| **Falsos Positivos (FP)**   | 78   |
-| **Verdaderos Positivos (TP)**  | 38   |
-| **Falsos Negativos (FN)**   | 570   |
+
+| **Métrica**                   | **Valor** |
+|-------------------------------|-----------|
+| **Precisión (Accuracy)**      | 66.13%    |
+| **Verdaderos Negativos (TN)** | 1227      |
+| **Falsos Positivos (FP)**     | 78        |
+| **Verdaderos Positivos (TP)** | 38        |
+| **Falsos Negativos (FN)**     | 570       |
 
 -   Tenemos un rendimiento moderado(66.13%).
 -   Clase 0 (No mejoró):
