@@ -40,7 +40,7 @@ ipak(packages)
 Para comenzar con esta implementación comenzaremos cargando el dataframe global limpio, es decir, transformado de actributos categoricos a numericos y eliminación de filas con valores faltantes.
 
 ```{r}
-df_cleaned <- read.csv("df_cleaned.csv")
+df_cleaned <- read.csv("data/df_cleaned.csv")
 df_cleaned
 ```
 
@@ -794,7 +794,7 @@ Se evaluará el modelo utilizando métricas como el **R² ajustado** y el **erro
 Primero cargamos el dataset ya preprocesado
 
 ```{r}
-df_cleaned_regresion <- read.csv("df_cleaned.csv")
+df_cleaned_regresion <- read.csv("data/df_cleaned.csv")
 df_cleaned_regresion
 ```
 
