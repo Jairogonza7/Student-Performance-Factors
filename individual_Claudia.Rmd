@@ -11,6 +11,8 @@ author: "Claudia Teresa Heredia Ceballos"
 
 ## Descripción del dominio
 
+El rendimiento académico es un factor clave en la educación, ya que impacta directamente en las oportunidades de los estudiantes y en el desarrollo de la sociedad. Este análisis busca predecir cual será el rendimiento o las calificaciones de los estudiantes según las distintas variables que los rodean en su día a día. 
+
 ### Enfoque del Trabajo
 
 ### Interés y motivación del estudio CAMBIO
@@ -26,7 +28,6 @@ library(randomForest)
 library(e1071)
 library(ggplot2)
 ```
-## PARTE 1: MODELOS SIN CLUSTERING NI FEAUTURE ENGINEERING
 
 
 
@@ -44,7 +45,7 @@ df_cleaned_c <-  df_cleaned %>%
 df_cleaned_c
 ```
 
-SOLUCIÓN 1: PREDICCIÓN DE EXAM_SCORE MEDIANTE GENERACIÓN DE DATOS SINTÉTICOS
+
 
 #### Análisis exploratorio de 'exam_score'
 
@@ -71,33 +72,54 @@ cat("Desviación estándar de exam_score:", sd_exam)
 ```
 
 
-## PARTE 1 SIN FEAUTURE ENGINEERING NI CLUSTERING
+## ¿Qué modelo funcionará mejor en la predicción de exam Score?
+
+
+###  Definir Variables Predictoras
+
+Primero, se define la variable objetivo Exam_Score, que es la que se intenta predecir. Luego, se obtiene la lista de todas las variables en el DataFrame df_cleaned_c. Posteriormente, se excluyen Exam_Score, ya que es la variable objetivo, y student_id, puesto que es un identificador y no aporta información predictiva. Finalmente, se imprime la lista de variables predictoras. 
+
 ```{r}
-
-
-
-# -------------------------------
-# 2️⃣ Definir Variables Predictoras
-# -------------------------------
 target_variable <- "Exam_Score"
 all_variables <- names(df_cleaned_c)
 predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
 print(predictor_variables)
+```
 
-# -------------------------------
-# 3️⃣ División en Train/Test
-# -------------------------------
+
+###  División en Train/Test
+
+Para la división del conjutno primero, se usa set.seed(123) para asegurar la reproducibilidad del muestreo. Luego, createDataPartition() divide los datos en 80% de entrenamiento (train_data) y 20% de prueba (test_data), manteniendo la distribución de Exam_Score en ambas muestras.
+
+```{r}
 set.seed(123)
 trainIndex <- createDataPartition(df_cleaned_c$Exam_Score, p = 0.8, list = FALSE)
 train_data <- df_cleaned_c[trainIndex, ]
 test_data <- df_cleaned_c[-trainIndex, ]
 
-# -------------------------------
-# 4️⃣ Modelos de Machine Learning
-# -------------------------------
+```
+
+
+
+### Modelos de Machine Learning
+
+Durante el estudio se compararán 3 modelos distintos de machine learning para establecer cuál de ellos funciona mejor con el conjunto de datos que tenemos. 
+
+#### Random Forest
+
+Random Forest es útil porque combina múltiples árboles de decisión, lo que mejora la precisión y la capacidad de generalización del modelo al reducir la varianza de las predicciones.
+
+Este bloque entrena y evalúa un modelo de Random Forest utilizando la librería caret. 
+
+* Se usa train() para entrenar el modelo y se emplea validación cruzada con 5 folds para evitar el sobreajuste y mejorar la generalización. 
+
+* Se habilita importance = TRUE para obtener la importancia de las variables predictoras. 
+
+* El modelo se evalúa haciendo predicciones en el conjunto de datos de prueba usando predict() y calculando el coeficiente de determinación 𝑅2, el cual mide qué tan bien el modelo explica la variabilidad de la variable objetivo (Exam_Score). 
+
+```{r}
 set.seed(123)
 
-# 📌 Random Forest
 rf_model <- train(
   Exam_Score ~ ., data = train_data,
   method = "rf",
@@ -106,37 +128,13 @@ rf_model <- train(
 )
 rf_pred <- predict(rf_model, newdata = test_data)
 r2_rf <- R2(rf_pred, test_data$Exam_Score)
+```
 
-# 📌 Regresión Lineal
-lm_model <- train(
-  Exam_Score ~ ., data = train_data,
-  method = "lm",
-  trControl = trainControl(method = "cv", number = 5)
-)
-lm_pred <- predict(lm_model, newdata = test_data)
-r2_lm <- R2(lm_pred, test_data$Exam_Score)
 
-# 📌 SVR
-svr_model <- train(
-  Exam_Score ~ ., data = train_data,
-  method = "svmRadial",
-  trControl = trainControl(method = "cv", number = 5),
-  preProcess = c("center", "scale"),
-  tuneLength = 5
-)
-svr_pred <- predict(svr_model, newdata = test_data)
-r2_svr <- R2(svr_pred, test_data$Exam_Score)
 
-# -------------------------------
-# 5️⃣ Comparación de Modelos
-# -------------------------------
-results_no_cluster_no_fe <- data.frame(Modelo = c("Random Forest", "Regresión Lineal", "SVR"),
-                              R2 = c(r2_rf, r2_lm, r2_svr))
-print(results_no_cluster_no_fe)
+##### Importancia de Variables en RF
 
-# -------------------------------
-# 6️⃣ Importancia de Variables en RF
-# -------------------------------
+```{r}
 importance_df <- data.frame(
   Variable = rownames(importance(rf_model$finalModel)),
   Importance = importance(rf_model$finalModel)[, 1]
@@ -149,8 +147,57 @@ ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
   coord_flip() +
   labs(title = "Importancia de las Variables en Random Forest", x = "Variable", y = "Incremento en MSE") +
   theme_minimal()
+```
+
+
+#### Regresión Lineal
+
+La regresión lineal se utiliza para modelar la relación entre una variable dependiente y una o más variables independientes.
+
+
+```{r}
+lm_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5)
+)
+lm_pred <- predict(lm_model, newdata = test_data)
+r2_lm <- R2(lm_pred, test_data$Exam_Score)
+```
+
+
+#### SVR
+
+Por último, en este apartado se entrana un modelo de Support Vector Regression. El modelo de SVR utiliza una función de núcleo radial (Radial Basis Function, RBF) para capturar relaciones no lineales en los datos.
+
+En este caso también se emplea validación cruzada con 5 folds (method = "cv", number = 5) para evitar el sobreajuste y mejorar la generalización. Además, se preprocesan los datos centrando y escalando las variables predictoras (preProcess = c("center", "scale")) y se exploran diferentes configuraciones de hiperparámetros (tuneLength = 5).
+
+
+```{r}
+
+svr_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 5),
+  preProcess = c("center", "scale"),
+  tuneLength = 5
+)
+svr_pred <- predict(svr_model, newdata = test_data)
+r2_svr <- R2(svr_pred, test_data$Exam_Score)
+```
+
+
+### Comparación de Modelos
+
+```{r}
+results_no_cluster_no_fe <- data.frame(Modelo = c("Random Forest", "Regresión Lineal", "SVR"),
+                              R2 = c(r2_rf, r2_lm, r2_svr))
+print(results_no_cluster_no_fe)
 
 ```
+
+
+
 
 ## PARTE 2 PRIMERA VERSION
 
@@ -282,7 +329,6 @@ ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
 ```
 
 
-## PARTE 2  Data Augmentation con Ruido Controlado
 
 
 
