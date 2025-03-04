@@ -6,6 +6,7 @@ author:
   - "Claudia Teresa Heredia Ceballos"
   - "Pedro López Ruz"
   - "José Antonio Medina García"
+output: html_document
 ---
 
 # Students Performance Factors
@@ -1615,6 +1616,24 @@ Esto podría indicar que **la cantidad de tiempo invertido en el estudio no siem
 Asimismo, el hecho de que el `Cluster 1` obtenga mejores resultados finales sugiere que estos estudiantes pueden tener una **mayor eficiencia en el aprendizaje o en la aplicación de los conocimientos adquiridos en los exámenes**. También es posible que el desempeño del `Cluster 2` se vea afectado por otros factores no reflejados en la tabla, como el manejo del estrés en evaluaciones finales, la metodología de estudio o diferencias en la forma en que asimilan la información.
 
 En general, el análisis sugiere que **el éxito académico no depende exclusivamente de la cantidad de horas dedicadas al estudio o la asistencia a clases**, sino que puede estar influenciado por la capacidad de los estudiantes para optimizar su aprendizaje y aplicar eficazmente sus conocimientos en situaciones evaluativas clave.
+
+#### Conclusiones
+
+Se han evaluado cinco métodos distintos de clustering, cada uno basado en diferentes criterios: académico, soporte, recursos, social y general. 
+
+Comparando los resultados, se puede determinar cuál es la estrategia más efectiva para agrupar a los estudiantes en función de su aprendizaje y necesidades.
+
+- **Agrupación Académica**: Permite segmentar a los estudiantes según su desempeño, motivación y hábitos de estudio. Es útil para personalizar estrategias de enseñanza, pero no considera otros factores clave como el apoyo externo o los recursos disponibles.
+
+- **Agrupación por Soporte**: Destaca a los alumnos que necesitan más ayuda, como tutorías o intervención familiar. Es efectiva para asignar recursos de apoyo, aunque no garantiza una mejora directa en el rendimiento si no se abordan otros factores.
+
+- **Agrupación por Recursos**: Revela desigualdades económicas y de acceso a herramientas educativas. Es útil para detectar necesidades de becas o programas de apoyo, pero no predice el éxito académico por sí solo.
+
+- **Agrupación Social**: Identifica patrones de socialización y participación extracurricular, pero su impacto en el aprendizaje es menos directo. Puede ser útil para fomentar la integración y la dinámica de grupo.
+
+- **Agrupación General**: Considera todas las variables y ofrece una visión integral del estudiante, permitiendo detectar combinaciones de factores que influyen en su rendimiento. Sin embargo, puede ser menos específica para intervenciones dirigidas.
+
+**Mejor Método**: La agrupación general es la más efectiva, ya que combina múltiples dimensiones del estudiante y permite un enfoque equilibrado. Sin embargo, para estrategias específicas (como mejorar el rendimiento o asignar tutorías), métodos más enfocados como la agrupación académica o de soporte pueden llegar a ser más útiles.
 
 ### Pregunta 2. ¿Cuáles son los factores clave que determinan si un estudiante mejorará su rendimiento académico?
 
