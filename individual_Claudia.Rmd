@@ -932,8 +932,8 @@ friendly_labels <- list(
     legend = "0 = Cerca, 3 = Lejos"
   ),
   Hours_Studied = list(
-    label = "¿Cuántas horas estudia el alumno al día?",
-    legend = "Ingrese la cantidad de horas dedicadas al estudio diariamente."
+    label = "¿Cuántas horas estudia el alumno a la semana?",
+    legend = "Ingrese la cantidad de horas dedicadas al estudio semanalmente."
   ),
   Access_to_Resources = list(
     label = "Disponibilidad de recursos educativos",
