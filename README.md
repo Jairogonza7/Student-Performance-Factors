@@ -1,6 +1,12 @@
-# Student-Performance-Factors
+# Trabajo Final Data Science
 
-## Archivos
+## Master en ingeniería del software: Cloud, datos y gestión de TI
+
+### Universidad de Sevilla
+
+## Student-Performance-Factors
+
+### Archivos
 
 El archivo `global.Rmd` incluye toda la información relacionada con el trabajo en grupo.
 
