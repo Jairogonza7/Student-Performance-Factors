@@ -15,6 +15,14 @@ En este estudio, analizamos los factores que influyen en el rendimiento académi
 
 Utilizaremos modelos estadísticos de regresión y análisis de superficie de respuesta para interpretar los datos y extraer conclusiones fundamentadas.
 
+Para contestar estas 2 preguntas, se usará el csv con los datos limpios extraido de la parte global.
+
+```{r}
+# Cargar datos limpiados
+df <- read.csv("data/df_cleaned.csv")
+
+```
+
 # Pregunta 1: ¿La relación de horas de estudio y redimiento es distinta para estudiantes con descacidades de aprendizaje?
 
 Este estudio investiga si los estudiantes con dificultades de aprendizaje requieren estrategias de estudio diferentes para alcanzar el mismo nivel de desempeño que sus compañeros sin discapacidades. Específicamente, analizaremos:
@@ -35,9 +43,6 @@ library(ggplot2)
 library(dplyr)
 library(lme4)
 
-# Cargar datos limpiados
-df <- read.csv("df_cleaned.csv")
-
 # Crear directorio para guardar imágenes
 if (!dir.exists("individual_JoseMedina_files")) {
   dir.create("individual_JoseMedina_files")
@@ -47,8 +52,11 @@ if (!dir.exists("individual_JoseMedina_files")) {
 modelo_interaccion <- lm(Exam_Score ~ Hours_Studied * Learning_Disabilities, data=df)
 summary(modelo_interaccion)
 
-# Guardar y mostrar gráfico de interacción
-p1 <- ggplot(df, aes(x=Hours_Studied, y=Exam_Score, color=factor(Learning_Disabilities))) +
+# Modificar la variable para que en lugar de 0 y 1, muestre "No" y "Sí"
+df$Learning_Disabilities <- factor(df$Learning_Disabilities, levels = c(0, 1), labels = c("No", "Sí"))
+
+# Guardar y mostrar gráfico de interacción con etiquetas personalizadas
+p1 <- ggplot(df, aes(x=Hours_Studied, y=Exam_Score, color=Learning_Disabilities)) +
   geom_point(alpha=0.5) +
   geom_smooth(method="lm", se=FALSE) +
   labs(title="Relación entre Horas de Estudio y Rendimiento Académico",
@@ -56,7 +64,10 @@ p1 <- ggplot(df, aes(x=Hours_Studied, y=Exam_Score, color=factor(Learning_Disabi
        y="Puntaje en Examen",
        color="Dificultades de Aprendizaje")
 
+# Guardar el gráfico
 ggsave("individual_JoseMedina_files/interaction_study_disabilities.png", plot=p1, width=8, height=6)
+
+# Mostrar el gráfico
 print(p1)
 ```
 
@@ -76,8 +87,8 @@ Además de las horas de estudio, analizamos si otros factores como la **motivaci
 
 ```{r}
 modelo_factores <- lm(Exam_Score ~ Hours_Studied + Motivation_Level + Attendance + Tutoring_Sessions + Learning_Disabilities + 
-                        Motivation_Level * Learning_Disabilities + Attendance * Learning_Disabilities + Tutoring_Sessions * Learning_Disabilities,
-                        data=df)
+                        Motivation_Level * Learning_Disabilities + Attendance * Learning_Disabilities + Tutoring_Sessions * Learning_Disabilities, data=df)
+
 summary(modelo_factores)
 
 # Guardar y mostrar gráfico de importancia de factores
@@ -140,7 +151,7 @@ library(dplyr)
 library(car)
 
 # Cargar datos limpiados
-df <- read.csv("df_cleaned.csv")
+df <- read.csv("data/df_cleaned.csv")
 
 # Crear directorio para guardar imágenes
 if (!dir.exists("individual_JoseMedina_files")) {
@@ -159,7 +170,7 @@ summary(modelo_superficie)
 -   **La interacción entre horas de sueño y horas de estudio (`Hours_Studied:Sleep_Hours`) tampoco es significativa** (**p = 0.7086**), lo que indica que **no hay una combinación específica de estudio y sueño que genere un efecto notable en el rendimiento académico**.
 -   A pesar de la falta de significancia en algunos coeficientes, el modelo sigue explicando una parte del rendimiento académico (**R² ajustado = 0.1986**), lo que indica que estas variables tienen cierta relación con la calificación final, pero no de una manera completamente determinante.
 
-📌 **Implicación:** No se observa una interacción clara entre las horas de estudio y las horas de sueño en términos de su impacto en el rendimiento académico. Esto sugiere que **otros factores pueden jugar un papel más importante en la determinación del rendimiento**.
+**Implicación:** No se observa una interacción clara entre las horas de estudio y las horas de sueño en términos de su impacto en el rendimiento académico. Esto sugiere que **otros factores pueden jugar un papel más importante en la determinación del rendimiento**.
 
 ------------------------------------------------------------------------
 
