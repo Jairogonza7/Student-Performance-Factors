@@ -9,15 +9,29 @@ author: "Claudia Teresa Heredia Ceballos"
 
 *Master en Ingeniería del Software: Cloud, Datos y Gestión de TI*
 
-## Descripción del dominio
+## Introducción
 
-El rendimiento académico es un factor clave en la educación, ya que impacta directamente en las oportunidades de los estudiantes y en el desarrollo de la sociedad. Este análisis busca predecir cual será el rendimiento o las calificaciones de los estudiantes según las distintas variables que los rodean en su día a día. 
+El rendimiento académico es un factor clave en la educación, ya que afecta tanto el futuro de los estudiantes como el desarrollo de la sociedad. Comprender qué influye en el desempeño escolar permite diseñar estrategias para mejorar los resultados. Este estudio explora el uso de machine learning para predecir la calificación de los estudiantes, identificando variables clave y desarrollando una herramienta interactiva para su aplicación en entornos educativos.
+
+### Descripción del dominio
+
+Factores como la asistencia a clase, la motivación, la calidad del profesorado y el entorno social influyen en el rendimiento académico. Aplicar modelos predictivos permite anticipar dificultades y tomar decisiones informadas. Sin embargo, uno de los principales retos de este estudio ha sido abordar la baja variabilidad en los datos, lo que dificultaba la capacidad de los modelos para hacer predicciones precisas. Para ello, se exploraron estrategias como feature engineering y data augmentation con el fin de mejorar la representación de los datos sin introducir ruido artificial.
 
 ### Enfoque del Trabajo
 
-### Interés y motivación del estudio CAMBIO
+Se han utilizado técnicas de machine learning para predecir el rendimiento académico, probando distintos modelos y optimizando su precisión. Además, se ha desarrollado un dashboard interactivo que permite a docentes y orientadores ingresar datos y obtener predicciones, haciendo que el modelo sea una herramienta práctica para mejorar la educación.
+
+### Interés y motivación del estudio
+
+El objetivo es demostrar que la inteligencia artificial puede ser una aliada en la educación, ayudando a identificar estudiantes en riesgo y facilitando estrategias personalizadas. Convertir modelos predictivos en herramientas accesibles brinda soluciones reales a los desafíos actuales del sistema educativo.
+
+
 
 ### Importancia local/nacional y en el contexto actual
+
+La educación enfrenta desafíos como la desigualdad en el acceso a recursos y la necesidad de personalización del aprendizaje. La aplicación de machine learning puede ayudar a optimizar la enseñanza, permitiendo a las instituciones anticiparse a problemas y mejorar la toma de decisiones. Implementar estos modelos a gran escala podría transformar la educación, ofreciendo nuevas oportunidades para mejorar el desempeño estudiantil.
+
+## Librerías necesarias durante este análisis.
 
 ```{r}
 library(magrittr)
@@ -27,18 +41,9 @@ library(caret)
 library(randomForest)
 library(e1071)
 library(ggplot2)
+library(shiny)
+library(plotly)
 
-library(tidyverse)
-library(caret)
-library(randomForest)
-library(e1071)
-library(ggplot2)
-
-library(tidyverse)
-library(caret)
-library(randomForest)
-library(e1071)
-library(ggplot2)
 ```
 
 
@@ -71,6 +76,8 @@ ggplot(df_cleaned_c, aes(x = Exam_Score)) +
 
 ```
 
+Como puede observarse existe una muy baja variabilidad de nuestra variable objetivo. 
+
 ```{r}
 # Calcular estadísticas descriptivas
 summary(df_cleaned_c$Exam_Score)
@@ -81,6 +88,7 @@ cat("Desviación estándar de exam_score:", sd_exam)
 
 ```
 
+El objetivo es abordar el problema de la variabilidad para ir más allá y no solo predecir si el rendimiento del estudiante mejora o empeora, si no, predecir, exactamente, la calificación que obtendrá el estudiante.
 
 ## ¿Qué modelo funcionará mejor en la predicción de exam Score?
 
@@ -715,42 +723,43 @@ Con ello podemos concluir que la interpolación no fue una buena estrategia para
 Como puede observarse en la tabla y después de las distintas pruebas, la mejor estrategia fue aplicar Data Augmentation junto con Feature Engineering. La interpolación, en cambio, fue una estrategia fallida. La Regresión Lineal fue el mejor modelo en general.
 
 
-## ¿Cómo podríamos aplicar estos resultados a la vida real?
+## Una vez elegido el mejor modelo, ¿Podremos mejorarlo haciendo algún ajuste de hiperparámetros?
+
+
+
+En este pounto se decide que la Regresión Lineal junto con Data Augmentation y Feauture Engineering es el modelo que mejor funciona con nuestro tipo de datos. Antes de terminar de resolver la pregunta, vamos a ajustar algunos parámetros para intentar mejorar el modelo:
 
 
 
 ```{r}
-library(shiny)
-library(tidyverse)
-library(caret)
-library(ggplot2)
-library(plotly)
 
-# -------------------------------
-# 1️⃣ Cargar los datos
-# -------------------------------
+
 df_cleaned <- read.csv("data/df_cleaned.csv")
 
 df_cleaned_c <- df_cleaned %>%
   select(-Previous_Scores_Category)
+```
 
-# -------------------------------
-# 2️⃣ Data Augmentation con Ruido Controlado
-# -------------------------------
+El ruido para el Data Augmentation se disminuye a 0.005: 
+
+```{r}
+
 set.seed(123)
 df_augmented <- df_cleaned_c %>% mutate(
-  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd(df_cleaned_c$Exam_Score) * 0.1)
+  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd(df_cleaned_c$Exam_Score) * 0.005)
 )
 
-# Limitar valores a 55-100
-df_augmented$Exam_Score <- pmax(pmin(df_augmented$Exam_Score, 100), 55)
+# Limitar valores a 50-100
+df_augmented$Exam_Score <- pmax(pmin(df_augmented$Exam_Score, 100), 50)
 
 # Imprimir desviación estándar después de agregar ruido
 cat("Desviación estándar después de agregar ruido:", sd(df_augmented$Exam_Score), "\n")
+```
 
-# -------------------------------
-# 3️⃣ Feature Engineering
-# -------------------------------
+### El Feauture Engineering lo dejaremos tal y como estaba en el apartado anterior:
+
+```{r}
+
 df_augmented <- df_augmented %>% mutate(
   study_sleep_ratio = as.numeric(scale(Hours_Studied / (Sleep_Hours + 1))),
   motivated_study = as.numeric(scale(Hours_Studied * Motivation_Level)),
@@ -768,31 +777,40 @@ df_augmented <- df_augmented %>% mutate(
   high_access_to_resources = as.factor(ifelse(Access_to_Resources > mean(Access_to_Resources, na.rm = TRUE), 1, 0)),
   social_influence = as.numeric(scale(Peer_Influence + Parental_Involvement + Teacher_Quality))
 )
+```
 
-# -------------------------------
-# 4️⃣ Definir Variables Predictoras
-# -------------------------------
+
+### Variables predictoras y división en Train Test.
+```{r}
+
 target_variable <- "Exam_Score"
 all_variables <- names(df_augmented)
 predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
 print(predictor_variables)
 
-# -------------------------------
-# 5️⃣ División en Train/Test
-# -------------------------------
+
 set.seed(123)
 trainIndex <- createDataPartition(df_augmented$Exam_Score, p = 0.8, list = FALSE)
 train_data <- df_augmented[trainIndex, ]
 test_data <- df_augmented[-trainIndex, ]
+```
 
-# -------------------------------
-# 6️⃣ Modelo de Regresión Lineal
-# -------------------------------
+
+### Regresión Lineal
+
+En este caso, con caret, podemos probar a optimizar la regresión lineal con 'glmet', que permite la regularización con Lasso (L1) y Ridge (L2):
+
+```{r}
+
 set.seed(123)
 lm_model <- train(
   Exam_Score ~ ., data = train_data,
-  method = "lm",
-  trControl = trainControl(method = "cv", number = 5)
+  method = "glmnet",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = expand.grid(
+    alpha = c(0, 0.5, 1),  # Ridge (0), Elastic Net (0.5), Lasso (1)
+    lambda = seq(0, 0.1, length = 10) # Probar valores de lambda
+  )
 )
 
 lm_pred <- predict(lm_model, newdata = test_data)
@@ -801,33 +819,239 @@ r2_lm <- R2(lm_pred, test_data$Exam_Score)
 # Guardar el modelo de Regresión Lineal
 save(lm_model, file = "best_model_lm.RData")
 
+```
 
 
+### Evaluación del modelo
+
+```{r}
+
+# MSE y RMSE
+mse_lm <- mean((lm_pred - test_data$Exam_Score)^2)
+rmse_lm <- sqrt(mse_lm)
+cat("MSE:", mse_lm, "\n")
+cat("RMSE:", rmse_lm, "\n")
+
+# MAE
+mae_lm <- mean(abs(lm_pred - test_data$Exam_Score))
+cat("MAE:", mae_lm, "\n")
+
+# R2
+cat("R2:", r2_lm, "\n")
+
+# Comparación de predicciones vs valores reales
+library(ggplot2)
+
+ggplot(data = data.frame(Real = test_data$Exam_Score, Predicho = lm_pred), aes(x = Real, y = Predicho)) +
+  geom_point(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") + 
+  labs(title = "Comparación: Valores Reales vs. Predicciones",
+       x = "Valores Reales",
+       y = "Predicciones") +
+  theme_minimal()
+
+# Distribución de Errores
+error <- lm_pred - test_data$Exam_Score
+
+ggplot(data.frame(error = error), aes(x = error)) +
+  geom_histogram(binwidth = 1, fill = "blue", alpha = 0.6) +
+  labs(title = "Distribución de los Errores",
+       x = "Error (Predicción - Real)",
+       y = "Frecuencia") +
+  theme_minimal()
 
 
 ```
 
 
+Finalmente, esta tabla muestra, después de muchas combinaciones, los cambios que mejor han funcionado en el modelo elegido en la pregunta anterior:
+
+
+| Hiperparámetro                                        | Antes | Ahora | 
+|-----------------------------------------------|--------------|-----------------|
+| Ruido                                | 0.1       | 0.005      | 
+| Regresión                           | Lineal Simple       | Ridge y Lasso      | 
+
+
+Los gráficos y las métricas obtenidas muestran cómo la ligera variación en la desviación estándar del ruido en Data Augmentation ha impactado en el rendimiento del modelo de regresión lineal.
+
+
+| Desviación estándar antes   |  Desviación estándar con Data Augmentation| 
+|-----------------------------------------------|--------------|
+| 3.912884                                | 3.913056       |  
+
+A simple vista, la diferencia en la desviación estándar parece mínima, pero ha generado una mejora en R² de 0.7504 → 0.7580.
+
+Si no se aplicara Data Augmentation, el resultado de R² disminuiría significativamente, como ocurrió en pruebas anteriores.
+
+
+Respecto a los gráficos, la mayoría de los errores están concentrados cerca de 0, lo cual indica que el modelo hace buenas predicciones.
+La distribución de errores es asimétrica, lo que indica que aún hay cierta subestimación para valores altos de "Exam_Score".
+
+
+En este punto del análisis, se ha conseguido obtener un modelo cuyo r2 es de 0.7580, lo que ya se empieza a considerar un modelo fiable (con margen de mejora).
+
+Pero, una vez que tenemos un modelo que funciona, nos surge la siguiente pregunta:
+
+## ¿Como podríamos llevar al uso estos modelos en la vida real?¿Qué aplicación realista podría tener este análisis?
+
+Solemos terminar los análisis proporcionando los resultados que hemos obtenido en los modelos, pero durante este proyecto, se ha querido finalizar dando un enfoque realista.
+
+Para entender mejor este resultado, el enfoque sería el siguiente:
+
+En todos los colegios existe un departamento orientativo, en el que además de las calificaciones de los alumnos, de las que se preocupan los profesores, se tienen en cuenta otros aspectos importantes en la vida del alumno, por ejemplo, ¿Realiza el alumno actividades extraescolares?¿Los padres se involucran lo suficiente con el alumno? o incluso ¿La influencia social le beneficia o le perjudica?.
+
+Para seguir con el supuesto, imaginando que nuestros alumnos son de segundo de bachillerato, año en el que se realiza selectividad y la calificación ha de ser la más alta posible, ¿Ayudaría al departamento orientativo tener un cuestionario que predijera la calificación final que obtendrá el alumno? 
+
+EL objetivo es entonces, que el alumno, con supervisión orientativa, responda a un a especie de cuestionario, en el que el resultado de la calificación final se mostrará al psicólogo del colegio. Junto con el estudio del árbol de decisión generado en 'global.rmd' podría llevarse a cabo un programa especial para ayudar a cada alumno en la "variable" que lo requiera. 
+
+Para llevarlo a cabo, se ha creado un dashboard, con la idea de que el alumno lo complete (siempre con supervisión orientativa):
+
+
+
+### Formulario 
+
 ```{r}
-# -------------------------------
-# 7️⃣ Dashboard en Shiny
-# -------------------------------
+library(shiny)
+
+# Se carga el modelo y los datos
 load("best_model_lm.RData")
 
+# Definición de etiquetas amigables y leyendas
+friendly_labels <- list(
+   Previous_Scores = list(
+    label = "¿Qué Calificación obtuvo en el anterior examen?",
+    legend = "Debe contestar a esta pregunta en forma de porcentaje: 0% = un 0, 100% = un 10."
+  ),
+  Attendance = list(
+    label = "¿A qué porcentaje de clases asiste el alumno?",
+    legend = "Debe contestar a esta pregunta en forma de porcentaje: 0% = no asiste a clase, 100% = asiste a todas las clases."
+  ),
+  Distance_from_Home = list(
+    label = "¿Cuál es la distancia del alumno al centro educativo?",
+    legend = "0 = Cerca, 3 = Lejos"
+  ),
+  Hours_Studied = list(
+    label = "¿Cuántas horas estudia el alumno al día?",
+    legend = "Ingrese la cantidad de horas dedicadas al estudio diariamente."
+  ),
+  Access_to_Resources = list(
+    label = "Disponibilidad de recursos educativos",
+    legend = "0 = No tengo acceso a recursos, 100 = Tengo acceso a todos los recursos."
+  ),
+  Extracurricular_Activities = list(
+    label = "Participación en Actividades extraescolares",
+    legend = "0 = No participo, 100 = Si participo"
+  ),
+  School_Type_Private = list(
+    label = "¿Asiste a un colegio privado?",
+    legend = "0 = No, 1 = Si"
+  ),
+  School_Type_Public = list(
+    label = "¿Asiste a un colegio público?",
+    legend = "0 = No, 1 = Si"
+  ),
+  Gender_Male = list(
+    label = "¿Se considera de género masculino?",
+    legend = "0 = No, 1 = Si"
+  ),
+  Gender_Female = list(
+    label = "¿Se considera de género femenino?",
+    legend = "0 = No, 1 = Si"
+  ),
+  Sleep_Hours = list(
+    label = "¿Cuántas horas suele dormir el alumno?",
+    legend = "Responda entre 4 y 10 horas"
+  ),
+  Internet_Access = list(
+    label = "¿Dispone de Acceso a Internet?",
+    legend = "0 = no, 1 = si"
+  ),
+  Tutoring_Sessions = list(
+    label = "¿A cuántas tutorías asiste al mes?",
+    legend = "Responda entre 0 y 8"
+  ),
+  study_sleep_ratio = list(
+    label = "¿Consideras que las horas de sueño y las horas de estudio están relacionadas?",
+    legend = "Valores mayores a 0 indican más estudio en relación con el sueño"
+  ),
+  motivated_study = list(
+    label = "¿Consideras que las horas de estudio están relacionadas con tu nivel de motivación?",
+    legend = "A más valor, más relación entre motivación y estudio"
+  ),
+  parent_peer_influence = list(
+    label = "¿Consideras que la influencia de tus padres y amigos influye en tu rendimiento?",
+    legend = "A más valor, más relación entre ambos factores"
+  ),
+  distance_category = list(
+    label = "Clasifica la distancia desde la casa a la escuela en grupos según percentiles",
+    legend = "Escoja una opción."
+  ),
+  study_group = list(
+    label = "¿A qué grupo pertenecería en relación a su estudio?",
+    legend = "Bajo = estudia poco, Medio = normal, Alto = estudia mucho"
+  ),
+  high_access_to_resources = list(
+    label = "Indica si un estudiante tiene acceso a recursos educativos por encima del promedio",
+    legend = "1 = si, por encima de la media,0 = no, por debajo de la media"
+  ),
+  social_influence = list(
+    label = "Combinación del impacto de los compañeros, la participación de los padres y la calidad docente",
+    legend = "Valores más altos indican mayor influencia social en el aprendizaje"
+  ),
+  Learning_Disabilities = list(
+    label = "¿Presenta dificultades de aprendizaje?",
+    legend = "0 = No presenta, 1 = Presenta alguna Dificultad"
+  ),
+  Parental_Education_Level = list(
+    label = "Nivel educativo mas alto de los padres",
+    legend = "1 = High School, 2 = College, 3 = Postgraduate"
+  ),
+  Family_Income = list(
+    label = "Nivel de Ingresos Familiares",
+    legend = "0 = Ingresos Bajos, 3 = Ingresos altos"
+  ),
+  Teacher_Quality = list(
+    label = "¿Como puntuaría la calidad del profesorado?",
+    legend = "0 = Baja Calidad, 3 = Calidad Alta"
+  ),
+  Peer_Influence = list(
+    label = "Influencia de los compañeros",
+    legend = "1 = Negativa, 3 = Positiva "
+  ),
+  Physical_Activity = list(
+    label = "Número medio de horas de actividad física a la semana",
+    legend = "Responda entre 0 y 6 horas"
+  ),
+  Motivation_Level = list(
+    label = "¿Cuál es el nivel de motivación del alumno?",
+    legend = "Debe ingresar un valor entre 1 (baja motivación) y 10 (alta motivación)."
+  ),
+  Parental_Involvement = list(
+    label = "¿Cuánto se involucran los padres en la educación del alumno?",
+    legend = "Ingrese un valor entre 1 (bajo) y 10 (alto)."
+  ),
+  Gender = list(
+    label = "¿Cuál es el género del alumno?",
+    legend = "Seleccione Female para femenino o Male para masculino."
+  ),
+  School_Type = list(
+    label = "¿A qué tipo de escuela asiste el alumno?",
+    legend = "Seleccione Public para escuela pública o Private para escuela privada."
+  )
+)
+
+# Variables que se tratarán como factores
+factor_vars <- c("distance_category", "study_group", "high_access_to_resources", "Gender", "School_Type")
+
 # UI - Interfaz de Usuario
-iu <- fluidPage(
+ui <- fluidPage(
   titlePanel("Predicción de Nota en el Examen"),
   sidebarLayout(
     sidebarPanel(
-      h4("Ingrese sus datos para predecir su nota"),
-      lapply(predictor_variables, function(var) {
-        if (var %in% c("distance_category", "study_group", "high_access_to_resources")) {
-          selectInput(var, var, choices = unique(df_augmented[[var]]))
-        } else {
-          sliderInput(var, var, min = min(df_augmented[[var]], na.rm = TRUE), max = max(df_augmented[[var]], na.rm = TRUE), value = mean(df_augmented[[var]], na.rm = TRUE))
-        }
-      }),
-      actionButton("predict", "Predecir Nota", class = "btn-primary")
+      h4("Ingrese sus datos en formato formulario"),
+      uiOutput("questionUI"),
+      uiOutput("actionButtonUI")
     ),
     mainPanel(
       h3("Predicción de su Nota"),
@@ -837,29 +1061,113 @@ iu <- fluidPage(
 )
 
 # Server - Lógica del Dashboard
-server <- function(input, output) {
-  predicted_score <- eventReactive(input$predict, {
-    input_data <- data.frame(
-      lapply(predictor_variables, function(var) {
-        if (var %in% c("distance_category", "study_group", "high_access_to_resources")) {
-          as.factor(input[[var]])
-        } else {
-          as.numeric(input[[var]])
-        }
-      })
-    )
-    colnames(input_data) <- predictor_variables
-    print(input_data)
-    predict(lm_model, newdata = input_data)
+server <- function(input, output, session) {
+  current_question <- reactiveVal(1)
+  responses <- reactiveValues()
+  final_result <- reactiveVal(NULL)
+
+  output$questionUI <- renderUI({
+    idx <- current_question()
+    if (idx <= length(predictor_variables)) {
+      var <- predictor_variables[idx]
+      label_text <- if (!is.null(friendly_labels[[var]])) friendly_labels[[var]]$label else var
+      legend_text <- if (!is.null(friendly_labels[[var]])) friendly_labels[[var]]$legend else ""
+      
+      input_ui <- if (var %in% factor_vars) {
+        selectInput(inputId = var, label = label_text, choices = unique(df_augmented[[var]]))
+      } else {
+        min_val <- min(df_augmented[[var]], na.rm = TRUE)
+        max_val <- max(df_augmented[[var]], na.rm = TRUE)
+        mean_val <- round(mean(df_augmented[[var]], na.rm = TRUE), 2)
+        sliderInput(inputId = var, label = label_text, min = min_val, max = max_val, value = mean_val)
+      }
+      
+      tagList(
+        input_ui,
+        helpText(legend_text)
+      )
+    } else {
+      h4("Ha respondido todas las preguntas.")
+    }
   })
-  
+
+  output$actionButtonUI <- renderUI({
+    idx <- current_question()
+    if (idx <= length(predictor_variables)) {
+      actionButton("nextOrPredict", ifelse(idx < length(predictor_variables), "Siguiente", "Predecir Nota"), class = "btn-primary")
+    } else {
+      actionButton("reset", "Reiniciar", class = "btn-secondary")
+    }
+  })
+
+  observeEvent(input$nextOrPredict, {
+    idx <- current_question()
+    if (idx <= length(predictor_variables)) {
+      var <- predictor_variables[idx]
+      if (var %in% factor_vars) {
+        responses[[var]] <- as.factor(input[[var]])
+      } else {
+        responses[[var]] <- as.numeric(input[[var]])
+      }
+      if (idx < length(predictor_variables)) {
+        current_question(idx + 1)
+      } else {
+        input_list <- lapply(predictor_variables, function(v) { responses[[v]] })
+        names(input_list) <- predictor_variables
+        input_data <- as.data.frame(input_list, stringsAsFactors = FALSE)
+        for (v in factor_vars) {
+          if (v %in% names(input_data)) {
+            input_data[[v]] <- as.factor(input_data[[v]])
+          }
+        }
+        pred <- predict(lm_model, newdata = input_data)
+        final_result(round(pred, 2))
+        current_question(idx + 1)
+      }
+    }
+  })
+
+  observeEvent(input$reset, {
+    current_question(1)
+    for (v in predictor_variables) {
+      responses[[v]] <- NULL
+    }
+    final_result(NULL)
+  })
+
   output$predicted_score <- renderText({
-    paste("Su nota estimada en el próximo examen es:", round(predicted_score(), 2))
+    res <- final_result()
+    if (!is.null(res)) {
+      paste("Su nota estimada en el próximo examen es:", res)
+    } else {
+      ""
+    }
   })
 }
 
-shinyApp(ui = iu, server = server)
+shinyApp(ui = ui, server = server)
 ```
+
+
+De esta forma, si al alumno, que hará selectividad ese mismo año, se le predice una mala calificación, puede comenzarse a estudiar su caso más a fondo y así intentar mejorarla. Además, esta herramienta permite ser usada durante todo el año, permitiendo hacer un estudio, por ejemplo, cada vez que el alumno haga un nuevo examen.
+
+
+## Conclusiones y Trabajo Futuro
+
+Este estudio ha demostrado que la regresión lineal, combinada con data augmentation y feature engineering, ha sido el modelo más efectivo para predecir el rendimiento académico de los estudiantes, alcanzando un R² de 0.7580. Más allá del análisis técnico, uno de los mayores logros ha sido convertir estos modelos en una herramienta aplicable a la vida real, mediante el desarrollo de un dashboard interactivo que permite a orientadores y estudiantes obtener predicciones personalizadas y tomar decisiones informadas para mejorar el desempeño académico.
+
+Sin embargo, el costo computacional limitó la exploración de modelos más complejos. Como trabajo futuro, se propone utilizar infraestructura más potente para evaluar técnicas avanzadas y mejorar aún más la precisión del modelo. Además, se trabajará en optimizar el dashboard, haciéndolo más profesional, intuitivo y con mejor integración de datos en tiempo real.
+
+En definitiva, este proyecto no solo ha demostrado la viabilidad del uso de machine learning en educación, sino que ha dado un paso hacia su implementación práctica, ofreciendo una herramienta útil con potencial para impactar positivamente en el entorno educativo.
+
+
+
+
+
+
+
+
+
 
 
 
