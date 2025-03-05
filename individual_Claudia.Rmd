@@ -9,18 +9,46 @@ author: "Claudia Teresa Heredia Ceballos"
 
 *Master en Ingeniería del Software: Cloud, Datos y Gestión de TI*
 
-## Descripción del dominio
+## Introducción
+
+El rendimiento académico es un factor clave en la educación, ya que afecta tanto el futuro de los estudiantes como el desarrollo de la sociedad. Comprender qué influye en el desempeño escolar permite diseñar estrategias para mejorar los resultados. Este estudio explora el uso de machine learning para predecir la calificación de los estudiantes, identificando variables clave y desarrollando una herramienta interactiva para su aplicación en entornos educativos.
+
+### Descripción del dominio
+
+Factores como la asistencia a clase, la motivación, la calidad del profesorado y el entorno social influyen en el rendimiento académico. Aplicar modelos predictivos permite anticipar dificultades y tomar decisiones informadas. Sin embargo, uno de los principales retos de este estudio ha sido abordar la baja variabilidad en los datos, lo que dificultaba la capacidad de los modelos para hacer predicciones precisas. Para ello, se exploraron estrategias como feature engineering y data augmentation con el fin de mejorar la representación de los datos sin introducir ruido artificial.
 
 ### Enfoque del Trabajo
 
-### Interés y motivación del estudio CAMBIO
+Se han utilizado técnicas de machine learning para predecir el rendimiento académico, probando distintos modelos y optimizando su precisión. Además, se ha desarrollado un dashboard interactivo que permite a docentes y orientadores ingresar datos y obtener predicciones, haciendo que el modelo sea una herramienta práctica para mejorar la educación.
+
+### Interés y motivación del estudio
+
+El objetivo es demostrar que la inteligencia artificial puede ser una aliada en la educación, ayudando a identificar estudiantes en riesgo y facilitando estrategias personalizadas. Convertir modelos predictivos en herramientas accesibles brinda soluciones reales a los desafíos actuales del sistema educativo.
+
+
 
 ### Importancia local/nacional y en el contexto actual
+
+La educación enfrenta desafíos como la desigualdad en el acceso a recursos y la necesidad de personalización del aprendizaje. La aplicación de machine learning puede ayudar a optimizar la enseñanza, permitiendo a las instituciones anticiparse a problemas y mejorar la toma de decisiones. Implementar estos modelos a gran escala podría transformar la educación, ofreciendo nuevas oportunidades para mejorar el desempeño estudiantil.
+
+## Librerías necesarias durante este análisis.
 
 ```{r}
 library(magrittr)
 library(dplyr)
+library(tidyverse)
+library(caret)
+library(randomForest)
+library(e1071)
+library(ggplot2)
+library(shiny)
+library(plotly)
+
 ```
+
+
+
+
 
 ## Descripción del dataset
 
@@ -34,13 +62,11 @@ df_cleaned_c <-  df_cleaned %>%
 df_cleaned_c
 ```
 
-SOLUCIÓN 1: PREDICCIÓN DE EXAM_SCORE MEDIANTE GENERACIÓN DE DATOS SINTÉTICOS
+
 
 #### Análisis exploratorio de 'exam_score'
 
 ```{r}
-# Cargar librerías necesarias
-library(ggplot2)
 
 # Histograma de exam_score
 ggplot(df_cleaned_c, aes(x = Exam_Score)) +
@@ -49,6 +75,8 @@ ggplot(df_cleaned_c, aes(x = Exam_Score)) +
   labs(title = "Distribución de 'Exam_Score'", x = "Exam Score", y = "Frecuencia")
 
 ```
+
+Como puede observarse existe una muy baja variabilidad de nuestra variable objetivo. 
 
 ```{r}
 # Calcular estadísticas descriptivas
@@ -60,255 +88,1087 @@ cat("Desviación estándar de exam_score:", sd_exam)
 
 ```
 
-#### Generación de datos sintéticos para 'exam_score'
+El objetivo es abordar el problema de la variabilidad para ir más allá y no solo predecir si el rendimiento del estudiante mejora o empeora, si no, predecir, exactamente, la calificación que obtendrá el estudiante.
+
+## ¿Qué modelo funcionará mejor en la predicción de exam Score?
+
+## Primera prueba. Random Forest, SVR y Regresión Lineal
+
+###  Definir Variables Predictoras
+
+Primero, se define la variable objetivo Exam_Score, que es la que se intenta predecir. Luego, se obtiene la lista de todas las variables en el DataFrame df_cleaned_c. Posteriormente, se excluyen Exam_Score, ya que es la variable objetivo, y student_id, puesto que es un identificador y no aporta información predictiva. Finalmente, se imprime la lista de variables predictoras. 
 
 ```{r}
-set.seed(123)
-
-# Aplicar K-Means para agrupar estudiantes similares
-num_clusters <- 4
-clusters <- kmeans(df_cleaned_c$Exam_Score, centers = num_clusters, nstart = 10)
-df_cleaned_c$Cluster <- clusters$cluster
-
-# Interpolación y generación de nuevos datos
-expandir_cluster <- function(df_cluster) {
-  n <- nrow(df_cluster)
-  if (n < 2) return(df_cluster)  # Evitar problemas en clusters pequeños
-  
-  # Generar nuevos valores interpolados
-  nuevos_puntos <- seq(min(df_cluster$Exam_Score), max(df_cluster$Exam_Score), length.out = n * 2)
-  nuevos_puntos <- sample(nuevos_puntos, size = n, replace = TRUE)  # Aleatorizar la selección
-  df_cluster$Exam_Score <- nuevos_puntos
-  return(df_cluster)
-}
-
-# Aplicar la expansión en cada cluster
-df_sintetico <- df_cleaned_c %>% group_by(Cluster) %>% group_modify(~ expandir_cluster(.x)) %>% ungroup()
-
-# Añadir ruido proporcional a la dispersión de cada cluster
-df_sintetico <- df_sintetico %>% mutate(
-  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd_exam * 0.5)
-)
-
-# Limitar valores a 55-100
-df_sintetico$Exam_Score <- pmax(pmin(df_sintetico$Exam_Score, 100), 55)
-
-# Verificar la nueva distribución
-summary(df_sintetico$Exam_Score)
-sd_exam_sintetico <- sd(df_sintetico$Exam_Score)
-cat("Desviación estándar de exam_score sintético:", sd_exam_sintetico)
-```
-
-
-
-```{r}
-
-# Combinar los dataframes
-df_combined <- rbind(df_cleaned_c
-                     , df_sintetico)
-
-# Verificar el nuevo dataframe
-dim(df_combined)  # Debería tener el doble de filas que el original
-
-```
-
-
-
-```{r}
-
-# Generar histograma
-ggplot(df_combined, aes(x = Exam_Score)) +
-  geom_histogram(binwidth = 5, fill = "purple", color = "black") +
-  theme_minimal() +
-  labs(title = "Distribución de 'exam_score' Combinado", x = "Exam Score", y = "Frecuencia")
-
-```
-
-
-
-
-#### Feature Engineering
-
-```{r}
-# Mostrar los nombres de las columnas de df_combined
-colnames(df_combined)
-
-```
-
-```{r}
-# Crear nuevas variables en df_combined
-df_combined <- df_cleaned_c %>% mutate(
-  study_sleep_ratio = scale(Hours_Studied / (Sleep_Hours + 1)),  # Normalización
-  motivated_study = scale(Hours_Studied * Motivation_Level),
-  parent_peer_influence = scale(Parental_Involvement * Peer_Influence)
-)
-
-# Verificar las nuevas variables
-summary(df_combined)
-```
-
-#### Modelo
-
-```{r}
-# Definir la variable objetivo
 target_variable <- "Exam_Score"
-
-# Obtener los nombres de todas las variables
-all_variables <- names(df_combined)
-
-# Excluir la variable objetivo y cualquier identificador
+all_variables <- names(df_cleaned_c)
 predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
-
-# Verificar las variables seleccionadas
 print(predictor_variables)
+```
+
+
+###  División en Train/Test
+
+Para la división del conjutno primero, se usa set.seed(123) para asegurar la reproducibilidad del muestreo. Luego, createDataPartition() divide los datos en 80% de entrenamiento (train_data) y 20% de prueba (test_data), manteniendo la distribución de Exam_Score en ambas muestras.
+
+```{r}
+set.seed(123)
+trainIndex <- createDataPartition(df_cleaned_c$Exam_Score, p = 0.8, list = FALSE)
+train_data <- df_cleaned_c[trainIndex, ]
+test_data <- df_cleaned_c[-trainIndex, ]
 
 ```
 
-Division en entrenamiento y prueba:
+
+
+### Modelos de Machine Learning
+
+Durante el estudio se compararán 3 modelos distintos de machine learning para establecer cuál de ellos funciona mejor con el conjunto de datos que tenemos. 
+
+#### Random Forest
+
+Random Forest es útil porque combina múltiples árboles de decisión, lo que mejora la precisión y la capacidad de generalización del modelo al reducir la varianza de las predicciones.
+
+Este bloque entrena y evalúa un modelo de Random Forest utilizando la librería caret. 
+
+* Se usa train() para entrenar el modelo y se emplea validación cruzada con 5 folds para evitar el sobreajuste y mejorar la generalización. 
+
+* Se habilita importance = TRUE para obtener la importancia de las variables predictoras. 
+
+* El modelo se evalúa haciendo predicciones en el conjunto de datos de prueba usando predict() y calculando el coeficiente de determinación 𝑅2, el cual mide qué tan bien el modelo explica la variabilidad de la variable objetivo (Exam_Score). 
 
 ```{r}
-# Cargar la librería necesaria
-#install.packages("lattice")
-
-library(caret)
-library(lattice)
-# Definir la semilla para reproducibilidad
 set.seed(123)
 
-# Crear índices para dividir los datos
-trainIndex <- createDataPartition(df_combined[[target_variable]], p = 0.8, list = FALSE)
-
-# Crear los conjuntos de entrenamiento y prueba
-train_data <- df_combined[trainIndex, ]
-test_data <- df_combined[-trainIndex, ]
-
-# Verificar las dimensiones
-cat("Dimensiones del conjunto de entrenamiento:", dim(train_data), "\n")
-cat("Dimensiones del conjunto de prueba:", dim(test_data), "\n")
-
-```
-
-```{r}
-# Instalar las librerías si aún no las tienes
-#install.packages("randomForest")
-#install.packages("caret")
-#install.packages("ggplot2")
-
-# Cargar las librerías
-library(randomForest)
-library(caret)
-library(ggplot2)
-
-```
-
-Datos sin escalar:
-
-```{r}
-# Optimización de hiperparámetros con tuneGrid
-rf_grid <- expand.grid(mtry = seq(2, length(predictor_variables), by = 2))
-rf_control <- trainControl(method = "cv", number = 5, search = "grid")
-```
-
-
-```{r}
-# Definir la fórmula del modelo
-modelo_formula <- as.formula(paste(target_variable, "~", paste(predictor_variables, collapse = " + ")))
-
-# Configurar el control de entrenamiento
-control <- trainControl(method = "cv", number = 5)  # Validación cruzada de 5 pliegues
-
-```
-
-
-entrenamiento RF
-
-```{r}
-# Entrenar el modelo
-set.seed(123)
 rf_model <- train(
   Exam_Score ~ ., data = train_data,
   method = "rf",
-  tuneGrid = rf_grid,
-  trControl = rf_control,
+  trControl = trainControl(method = "cv", number = 5),
   importance = TRUE
 )
-
-```
-
-evaluacion
-```{r}
-# Evaluación del modelo
 rf_pred <- predict(rf_model, newdata = test_data)
-r2 <- cor(test_data$Exam_Score, rf_pred)^2
-cat("R^2 del modelo Random Forest:", r2, "\n")
-
+r2_rf <- R2(rf_pred, test_data$Exam_Score)
 ```
 
 
 
-
-
-
-importancia de variables:
+##### Importancia de Variables en RF
 
 ```{r}
+importance_df <- data.frame(
+  Variable = rownames(importance(rf_model$finalModel)),
+  Importance = importance(rf_model$finalModel)[, 1]
+)
+importance_df <- importance_df[order(importance_df$Importance, decreasing = TRUE), ]
 
-
-# Visualizar la importancia
-varImpPlot(rf_model$finalModel, main = "Importancia de las Variables en el Modelo Random Forest")
-
-
+# Gráfico
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Importancia de las Variables en Random Forest", x = "Variable", y = "Incremento en MSE") +
+  theme_minimal()
 ```
 
-Regresion Lineal
+Como puede observarse en la gráfica de importancia de variables, "Attendance" y "Hours_Studied" son las más influyentes con gran diferencia. 
+
+#### Regresión Lineal
+
+La regresión lineal se utiliza para modelar la relación entre una variable dependiente y una o más variables independientes.
+
 
 ```{r}
-# Entrenar el modelo de regresión lineal
-set.seed(123)
-modelo_lm <- caret::train(
-  form = modelo_formula,
-  data = train_data,
+lm_model <- train(
+  Exam_Score ~ ., data = train_data,
   method = "lm",
   trControl = trainControl(method = "cv", number = 5)
 )
-
-# Predicciones
-predicciones_lm <- predict(modelo_lm, newdata = test_data)
-
-# Métricas de rendimiento
-mae_lm <- MAE(predicciones_lm, test_data[[target_variable]])
-rmse_lm <- RMSE(predicciones_lm, test_data[[target_variable]])
-r2_lm <- R2(predicciones_lm, test_data[[target_variable]])
-
-cat("Regresión Lineal - MAE:", mae_lm, "\n")
-cat("Regresión Lineal - RMSE:", rmse_lm, "\n")
-cat("Regresión Lineal - R²:", r2_lm, "\n")
-
+lm_pred <- predict(lm_model, newdata = test_data)
+r2_lm <- R2(lm_pred, test_data$Exam_Score)
 ```
-SVR
+
+
+#### SVR
+
+Por último, en este apartado se entrana un modelo de Support Vector Regression. El modelo de SVR utiliza una función de núcleo radial (Radial Basis Function, RBF) para capturar relaciones no lineales en los datos.
+
+En este caso también se emplea validación cruzada con 5 folds (method = "cv", number = 5) para evitar el sobreajuste y mejorar la generalización. Además, se preprocesan los datos centrando y escalando las variables predictoras (preProcess = c("center", "scale")) y se exploran diferentes configuraciones de hiperparámetros (tuneLength = 5).
+
+
 ```{r}
-# Entrenar el modelo SVR
-set.seed(123)
-modelo_svr <- caret::train(
-  form = modelo_formula,
-  data = train_data,
+
+svr_model <- train(
+  Exam_Score ~ ., data = train_data,
   method = "svmRadial",
   trControl = trainControl(method = "cv", number = 5),
   preProcess = c("center", "scale"),
   tuneLength = 5
 )
+svr_pred <- predict(svr_model, newdata = test_data)
+r2_svr <- R2(svr_pred, test_data$Exam_Score)
+```
 
-# Predicciones
-predicciones_svr <- predict(modelo_svr, newdata = test_data)
 
-# Métricas de rendimiento
-mae_svr <- MAE(predicciones_svr, test_data[[target_variable]])
-rmse_svr <- RMSE(predicciones_svr, test_data[[target_variable]])
-r2_svr <- R2(predicciones_svr, test_data[[target_variable]])
+### Comparación de Modelos
 
-cat("SVR - MAE:", mae_svr, "\n")
-cat("SVR - RMSE:", rmse_svr, "\n")
-cat("SVR - R²:", r2_svr, "\n")
+```{r}
+results_no_cluster_no_fe <- data.frame(Modelo = c("Random Forest", "Regresión Lineal", "SVR"),
+                              R2 = c(r2_rf, r2_lm, r2_svr))
+print(results_no_cluster_no_fe)
 
 ```
+La Regresión Lineal obtuvo el mejor desempeño con un𝑅2 de 0.7299, superando a SVR y Random Forest.
+SVR también mostró un rendimiento similar a la regresión lineal, con un 𝑅2 de 0.7256.
+Random Forest tuvo el peor desempeño (0.6523), lo que sugiere que el modelo no pudo captar bien la estructura de los datos en su forma actual.
+
+
+
+Durante todo el análisis (tanto grupal como individual), se ha demostrado que los la estructura de los datos dificultan en gran medida el funcionamiento de los modelos predictivos. Por ello, sirge la siguiente pregunta:
+
+
+## ¿Podrían mejorar los modelos si se alteran los datos?
+
+## Primera prueba. Comparación de Modelos aplicando Feature Engineering.:
+
+```{r}
+
+df_cleaned <- read.csv("data/df_cleaned.csv")
+
+df_cleaned_c <- df_cleaned %>%
+  select(-Previous_Scores_Category)  # Eliminamos una variable no utilizada
+```
+
+
+### Feature Engineering
+
+Se crean nuevas variables derivadas de combinaciones lógicas de las existentes para mejorar la capacidad predictiva de los modelos.
+
+* 'study_sleep_ratio': Relación entre horas de estudio y horas de sueño. Se introduce para medir el equilibrio entre descanso y preparación académica.
+
+* 'motivated_study': Producto de horas de estudio y nivel de motivación. Representa el impacto de la motivación en el esfuerzo académico.
+
+* 'parent_peer_influence': Combinación del involucramiento parental y la influencia de los pares. Se usa para medir el impacto del entorno social.
+
+* 'distance_category': Agrupa la distancia a la escuela en tres categorías: Cerca, Media y Lejos.
+
+* 'study_group': Clasifica las horas de estudio en tres categorías: Bajo, Medio y Alto.
+
+* 'high_access_to_resources': Variable binaria que indica si el estudiante tiene acceso a recursos por encima de la media.
+
+* 'social_influence': Suma de la influencia de pares, el involucramiento parental y la calidad del maestro, escalada para facilitar la comparación.
+
+```{r}
+
+df_cleaned_c <- df_cleaned_c %>% mutate(
+  study_sleep_ratio = scale(Hours_Studied / (Sleep_Hours + 1)),
+  motivated_study = scale(Hours_Studied * Motivation_Level),
+  parent_peer_influence = scale(Parental_Involvement * Peer_Influence),
+  distance_category = case_when(
+    Distance_from_Home < quantile(Distance_from_Home, 0.33) ~ "Cerca",
+    Distance_from_Home < quantile(Distance_from_Home, 0.66) ~ "Media",
+    TRUE ~ "Lejos"
+  ),
+  study_group = case_when(
+    Hours_Studied < quantile(Hours_Studied, 0.33) ~ "Bajo",
+    Hours_Studied < quantile(Hours_Studied, 0.66) ~ "Medio",
+    TRUE ~ "Alto"
+  ),
+  high_access_to_resources = ifelse(Access_to_Resources > mean(Access_to_Resources, na.rm = TRUE), 1, 0),
+  social_influence = scale(Peer_Influence + Parental_Involvement + Teacher_Quality)
+)
+
+# Convertir variables categóricas a factores
+df_cleaned_c$distance_category <- as.factor(df_cleaned_c$distance_category)
+df_cleaned_c$study_group <- as.factor(df_cleaned_c$study_group)
+
+
+```
+
+
+### División en Train Test
+
+```{r}
+
+set.seed(123)
+trainIndex <- createDataPartition(df_cleaned_c$Exam_Score, p = 0.8, list = FALSE)
+train_data <- df_cleaned_c[trainIndex, ]
+test_data <- df_cleaned_c[-trainIndex, ]
+```
+
+
+### Entrenamiento de Modelos: Randon Forest vs SVR vs Regresión Lineal:
+
+```{r}
+
+set.seed(123)
+
+# 📌 Random Forest
+rf_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5),
+  importance = TRUE
+)
+rf_pred <- predict(rf_model, newdata = test_data)
+r2_rf <- R2(rf_pred, test_data$Exam_Score)
+
+
+# Importancia de Variables en RF
+
+importance_df <- data.frame(
+  Variable = rownames(importance(rf_model$finalModel)),
+  Importance = importance(rf_model$finalModel)[, 1]
+)
+importance_df <- importance_df[order(importance_df$Importance, decreasing = TRUE), ]
+
+# Gráfico
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Importancia de las Variables en Random Forest", x = "Variable", y = "Incremento en MSE") +
+  theme_minimal()
+# 📌 Regresión Lineal
+lm_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5)
+)
+lm_pred <- predict(lm_model, newdata = test_data)
+r2_lm <- R2(lm_pred, test_data$Exam_Score)
+
+# 📌 SVR
+svr_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 5),
+  preProcess = c("center", "scale"),
+  tuneLength = 5
+)
+svr_pred <- predict(svr_model, newdata = test_data)
+r2_svr <- R2(svr_pred, test_data$Exam_Score)
+```
+La importancia de variables se mantiene similar, pero ahora aparecen algunas nuevas transformaciones de variables como "motivated_study" y "social_influence, que ya no se muestran tan alejadas de la importandia de Hours_Studied, aunque sí de la asistencia a clase. 
+
+### Comparación de Modelos: 
+
+```{r}
+
+results_no_cluster <- data.frame(Modelo = c("Random Forest", "Regresión Lineal", "SVR"),
+                                 R2 = c(r2_rf, r2_lm, r2_svr))
+print(results_no_cluster)
+
+
+
+```
+Los resultados son muy similares a la prueba anterior, lo que indica que el Feature Engineering no tuvo un impacto significativo en el rendimiento de los modelos.
+
+Random Forest sigue con el peor desempeño (0.6473), e incluso mostró una leve disminución en comparación con la prueba anterior.
+
+La Regresión Lineal y SVR no experimentaron cambios significativos.
+
+
+
+## Segunda prueba. Comparación de Modelos con Data Augmentation y Feature Engineering.
+
+
+En esta sección, se evalúa cuál modelo de machine learning predice mejor el 'Exam_Score' tras aplicar técnicas de 'data augmentation' con ruido controlado y 'feature engineering'. El objetivo es verificar si estas mejoras incrementan la capacidad predictiva de los modelos previamente utilizados: Random Forest, Regresión Lineal y Support Vector Regression (SVR).
+
+Cargamos nuevamente los datos (eliminando la variable que no nos sirve):
+
+```{r}
+df_cleaned <- read.csv("data/df_cleaned.csv")
+
+df_cleaned_c <- df_cleaned %>%
+  select(-Previous_Scores_Category)  # Eliminamos una variable no utilizada
+```
+
+
+### Data Augmentation con Ruido Controlado
+
+Para mejorar la variabilidad de los datos sin alterar significativamente la información original, se introduce ruido controlado en la variable objetivo Exam_Score. Se genera una perturbación normal con media 0 y desviación estándar del 10% de la desviación estándar original. Además, los valores se limitan al rango [50, 100] para mantener la coherencia de los datos.
+
+```{r}
+
+set.seed(123)
+df_augmented <- df_cleaned_c %>% mutate(
+  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd(df_cleaned_c$Exam_Score) * 0.1)  # Ruido moderado
+)
+
+# Limitar valores a 50-100
+df_augmented$Exam_Score <- pmax(pmin(df_augmented$Exam_Score, 100), 50)
+
+# Imprimir desviación estándar después de Data Augmentation
+cat("Desviación estándar de Exam_Score después de Data Augmentation:", sd(df_augmented$Exam_Score), "\n")
+```
+
+
+### Feauture Engineering
+
+En este apartado se mantienen las nuevas variables que se crearon durante la primera prueba. 
+
+```{r}
+
+df_augmented <- df_augmented %>% mutate(
+  study_sleep_ratio = scale(Hours_Studied / (Sleep_Hours + 1)),
+  motivated_study = scale(Hours_Studied * Motivation_Level),
+  parent_peer_influence = scale(Parental_Involvement * Peer_Influence),
+  distance_category = case_when(
+    Distance_from_Home < quantile(Distance_from_Home, 0.33) ~ "Cerca",
+    Distance_from_Home < quantile(Distance_from_Home, 0.66) ~ "Media",
+    TRUE ~ "Lejos"
+  ),
+  study_group = case_when(
+    Hours_Studied < quantile(Hours_Studied, 0.33) ~ "Bajo",
+    Hours_Studied < quantile(Hours_Studied, 0.66) ~ "Medio",
+    TRUE ~ "Alto"
+  ),
+  high_access_to_resources = ifelse(Access_to_Resources > mean(Access_to_Resources, na.rm = TRUE), 1, 0),
+  social_influence = scale(Peer_Influence + Parental_Involvement + Teacher_Quality)
+)
+
+# Convertir variables categóricas a factores
+df_augmented$distance_category <- as.factor(df_augmented$distance_category)
+df_augmented$study_group <- as.factor(df_augmented$study_group)
+```
+
+
+### Definición de Variables Predictoras
+
+```{r}
+
+target_variable <- "Exam_Score"
+all_variables <- names(df_augmented)
+predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
+print(predictor_variables)
+```
+
+###  División en Train/Test
+
+```{r}
+
+set.seed(123)
+trainIndex <- createDataPartition(df_augmented$Exam_Score, p = 0.8, list = FALSE)
+train_data <- df_augmented[trainIndex, ]
+test_data <- df_augmented[-trainIndex, ]
+```
+
+
+### Entrenamiento y Validación de los modelos:
+
+```{r}
+
+set.seed(123)
+
+# Random Forest
+rf_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5),
+  importance = TRUE
+)
+rf_pred <- predict(rf_model, newdata = test_data)
+r2_rf <- R2(rf_pred, test_data$Exam_Score)
+
+
+importance_df <- data.frame(
+  Variable = rownames(importance(rf_model$finalModel)),
+  Importance = importance(rf_model$finalModel)[, 1]
+)
+importance_df <- importance_df[order(importance_df$Importance, decreasing = TRUE), ]
+
+# Gráfico
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Importancia de las Variables en Random Forest", x = "Variable", y = "Incremento en MSE") +
+  theme_minimal()
+
+
+# Regresión Lineal
+lm_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5)
+)
+lm_pred <- predict(lm_model, newdata = test_data)
+r2_lm <- R2(lm_pred, test_data$Exam_Score)
+
+# SVR
+svr_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 5),
+  preProcess = c("center", "scale"),
+  tuneLength = 5
+)
+svr_pred <- predict(svr_model, newdata = test_data)
+r2_svr <- R2(svr_pred, test_data$Exam_Score)
+
+```
+
+
+### Comparación de los Modelos:
+
+```{r}
+
+results_data_augmentation <- data.frame(Modelo = c("Random Forest", "Regresión Lineal", "SVR"),
+                                        R2 = c(r2_rf, r2_lm, r2_svr))
+print(results_data_augmentation)
+```
+Aquí se observó una mejora en todos los modelos después de aplicar Data Augmentation.
+
+Regresión Lineal sigue siendo el mejor modelo, alcanzando un 𝑅2 de 0.7504.
+
+SVR también mejoró, con un 𝑅2 de 0.7452.
+
+Random Forest experimentó la mayor mejora, aumentando su𝑅2 de 0.6473 a 0.6853, lo que sugiere que el Data Augmentation ayudó a reducir la variabilidad y mejorar el aprendizaje del modelo.
+
+Agregar datos sintéticos con ruido moderado ayudó a mejorar la generalización de los modelos.
+
+
+
+## Tercera prueba. Comparación de Modelos con Interpolación y Feature Engineering.
+
+En esta sección, se evalúa cuál modelo de machine learning predice mejor el Exam_Score tras aplicar interpolación en lugar de data augmentation con ruido controlado y manteniendo el feature engineering. La interpolación permite generar datos intermedios basados en los valores existentes, lo que puede reducir el sesgo en los modelos y mejorar la calidad del entrenamiento.
+
+
+```{r}
+df_cleaned <- read.csv("data/df_cleaned.csv")
+
+df_cleaned_c <- df_cleaned %>%
+  select(-Previous_Scores_Category)  # Eliminamos una variable no utilizada
+```
+
+
+###  Interpolación y generación de nuevos datos.
+
+En lugar de añadir ruido aleatorio, utilizamos interpolación para generar valores intermedios a partir de la distribución existente de Exam_Score. La interpolación ayuda a mejorar la representatividad de los datos sin distorsionar demasiado la información original.
+
+En lugar de añadir ruido aleatorio, utilizamos interpolación para generar valores intermedios a partir de la distribución existente de Exam_Score. La interpolación consiste en estimar valores dentro del rango de los datos originales para simular una distribución más continua y mejorar la representatividad de los datos.
+
+Para lograrlo, se han realizado los siguientes pasos:
+
+1. Generación de puntos intermedios: Se crean valores dentro del rango mínimo y máximo de Exam_Score, asegurando una mayor densidad de datos en la distribución original.
+
+2. Aleatorización: Se seleccionan valores interpolados de forma aleatoria para evitar patrones artificiales.
+
+3. Ajuste de la distribución: Se introduce un pequeño ruido proporcional para reflejar la variabilidad natural de los datos.
+
+4. Limitación de valores: Se restringen los valores interpolados al rango válido de Exam_Score [55, 100].
+
+```{r}
+
+expandir_datos <- function(df) {
+  n <- nrow(df)
+  
+  if (n < 2) return(df)  # Evitar problemas en conjuntos pequeños
+  
+  # Generar nuevos valores interpolados
+  nuevos_puntos <- seq(min(df$Exam_Score), max(df$Exam_Score), length.out = n * 2)
+  nuevos_puntos <- sample(nuevos_puntos, size = n, replace = TRUE)  # Aleatorizar selección
+  df$Exam_Score <- nuevos_puntos
+  return(df)
+}
+
+# Aplicar interpolación
+df_interpolado <- expandir_datos(df_cleaned_c)
+
+# Añadir ruido proporcional a la dispersión
+df_interpolado <- df_interpolado %>% mutate(
+  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd(df_interpolado$Exam_Score) * 0.5)
+)
+
+# Limitar valores a 50-100
+df_interpolado$Exam_Score <- pmax(pmin(df_interpolado$Exam_Score, 100), 50)
+
+# Imprimir desviación estándar después de Interpolación
+cat("Desviación estándar de Exam_Score después de Interpolación:", sd(df_interpolado$Exam_Score), "\n")
+
+```
+
+
+###  Feature Engineering
+
+Durante esta prueba se mantienen las transformaciones anteriores para mejorar la capacidad predictiva de los modelos.
+
+```{r}
+
+df_interpolado <- df_interpolado %>% mutate(
+  study_sleep_ratio = scale(Hours_Studied / (Sleep_Hours + 1)),
+  motivated_study = scale(Hours_Studied * Motivation_Level),
+  parent_peer_influence = scale(Parental_Involvement * Peer_Influence),
+  distance_category = case_when(
+    Distance_from_Home < quantile(Distance_from_Home, 0.33) ~ "Cerca",
+    Distance_from_Home < quantile(Distance_from_Home, 0.66) ~ "Media",
+    TRUE ~ "Lejos"
+  ),
+  study_group = case_when(
+    Hours_Studied < quantile(Hours_Studied, 0.33) ~ "Bajo",
+    Hours_Studied < quantile(Hours_Studied, 0.66) ~ "Medio",
+    TRUE ~ "Alto"
+  ),
+  high_access_to_resources = ifelse(Access_to_Resources > mean(Access_to_Resources, na.rm = TRUE), 1, 0),
+  social_influence = scale(Peer_Influence + Parental_Involvement + Teacher_Quality)
+)
+
+# Convertir variables categóricas a factores
+df_interpolado$distance_category <- as.factor(df_interpolado$distance_category)
+df_interpolado$study_group <- as.factor(df_interpolado$study_group)
+
+```
+
+
+### Definición de Variables Predictoras y División del conjunto:
+```{r}
+
+target_variable <- "Exam_Score"
+all_variables <- names(df_interpolado)
+predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
+print(predictor_variables)
+
+
+# Train/Test
+
+set.seed(123)
+trainIndex <- createDataPartition(df_interpolado$Exam_Score, p = 0.8, list = FALSE)
+train_data <- df_interpolado[trainIndex, ]
+test_data <- df_interpolado[-trainIndex, ]
+```
+
+
+### Entrenamiento y Validación de Modelos:
+
+En este apartado se vuelven a entrenar los mismos modelos: Random Forest, SVR y Regresión Lineal.
+
+```{r}
+
+set.seed(123)
+
+# Random Forest
+rf_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5),
+  importance = TRUE
+)
+rf_pred <- predict(rf_model, newdata = test_data)
+r2_rf <- R2(rf_pred, test_data$Exam_Score)
+
+#  Importancia de Variables en RF
+
+importance_df <- data.frame(
+  Variable = rownames(importance(rf_model$finalModel)),
+  Importance = importance(rf_model$finalModel)[, 1]
+)
+importance_df <- importance_df[order(importance_df$Importance, decreasing = TRUE), ]
+
+# Gráfico
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Importancia de las Variables en Random Forest", x = "Variable", y = "Incremento en MSE") +
+  theme_minimal()
+
+# Regresión Lineal
+lm_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5)
+)
+lm_pred <- predict(lm_model, newdata = test_data)
+r2_lm <- R2(lm_pred, test_data$Exam_Score)
+
+#  SVR
+svr_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 5),
+  preProcess = c("center", "scale"),
+  tuneLength = 5
+)
+svr_pred <- predict(svr_model, newdata = test_data)
+r2_svr <- R2(svr_pred, test_data$Exam_Score)
+```
+
+
+
+### Comparación de Modelos:
+```{r}
+
+results_interpolation <- data.frame(Modelo = c("Random Forest", "Regresión Lineal", "SVR"),
+                                    R2 = c(r2_rf, r2_lm, r2_svr))
+print(results_interpolation)
+
+```
+
+Los resultados se desplomaron drásticamente.
+Todos los modelos obtuvieron un 𝑅2 cercano a 0, lo que indica que no lograron captar ninguna relación entre las variables y el Exam_Score.
+
+La interpolación alteró demasiado la estructura de los datos, haciendo que los modelos pierdan completamente su capacidad predictiva.
+
+La desviación estándar de Exam_Score se disparó de 3.93 a 14.10, lo que sugiere que los valores interpolados introdujeron demasiada variabilidad artificial.
+Con ello podemos concluir que la interpolación no fue una buena estrategia para este conjunto de datos, de hecho, ha sido la prueba con peores resultados. 
+
+
+### Tabla Comparativa y Conclusión Final:
+
+# Comparación Final de Modelos
+
+| Prueba                                        | Random Forest | Regresión Lineal | SVR  |
+|-----------------------------------------------|--------------|-----------------|------|
+| Primera Prueba                                | 0.6523       | **0.7299**      | 0.7256 |
+| Feature Engineering                           | 0.6473       | **0.7292**      | 0.7259 |
+| Data Augmentation + Feature Engineering       | 0.6853       | **0.7504**      | 0.7452 |
+| Interpolación + Feature Engineering           | 0.0001       | **0.0005**      | 0.0002 |
+
+
+Como puede observarse en la tabla y después de las distintas pruebas, la mejor estrategia fue aplicar Data Augmentation junto con Feature Engineering. La interpolación, en cambio, fue una estrategia fallida. La Regresión Lineal fue el mejor modelo en general.
+
+
+## Una vez elegido el mejor modelo, ¿Podremos mejorarlo haciendo algún ajuste de hiperparámetros?
+
+
+
+En este pounto se decide que la Regresión Lineal junto con Data Augmentation y Feauture Engineering es el modelo que mejor funciona con nuestro tipo de datos. Antes de terminar de resolver la pregunta, vamos a ajustar algunos parámetros para intentar mejorar el modelo:
+
+
+
+```{r}
+
+
+df_cleaned <- read.csv("data/df_cleaned.csv")
+
+df_cleaned_c <- df_cleaned %>%
+  select(-Previous_Scores_Category)
+```
+
+El ruido para el Data Augmentation se disminuye a 0.005: 
+
+```{r}
+
+set.seed(123)
+df_augmented <- df_cleaned_c %>% mutate(
+  Exam_Score = Exam_Score + rnorm(n(), mean = 0, sd = sd(df_cleaned_c$Exam_Score) * 0.005)
+)
+
+# Limitar valores a 50-100
+df_augmented$Exam_Score <- pmax(pmin(df_augmented$Exam_Score, 100), 50)
+
+# Imprimir desviación estándar después de agregar ruido
+cat("Desviación estándar después de agregar ruido:", sd(df_augmented$Exam_Score), "\n")
+```
+
+### El Feauture Engineering lo dejaremos tal y como estaba en el apartado anterior:
+
+```{r}
+
+df_augmented <- df_augmented %>% mutate(
+  study_sleep_ratio = as.numeric(scale(Hours_Studied / (Sleep_Hours + 1))),
+  motivated_study = as.numeric(scale(Hours_Studied * Motivation_Level)),
+  parent_peer_influence = as.numeric(scale(Parental_Involvement * Peer_Influence)),
+  distance_category = as.factor(case_when(
+    Distance_from_Home < quantile(Distance_from_Home, 0.33) ~ "Cerca",
+    Distance_from_Home < quantile(Distance_from_Home, 0.66) ~ "Media",
+    TRUE ~ "Lejos"
+  )),
+  study_group = as.factor(case_when(
+    Hours_Studied < quantile(Hours_Studied, 0.33) ~ "Bajo",
+    Hours_Studied < quantile(Hours_Studied, 0.66) ~ "Medio",
+    TRUE ~ "Alto"
+  )),
+  high_access_to_resources = as.factor(ifelse(Access_to_Resources > mean(Access_to_Resources, na.rm = TRUE), 1, 0)),
+  social_influence = as.numeric(scale(Peer_Influence + Parental_Involvement + Teacher_Quality))
+)
+```
+
+
+### Variables predictoras y división en Train Test.
+```{r}
+
+target_variable <- "Exam_Score"
+all_variables <- names(df_augmented)
+predictor_variables <- setdiff(all_variables, c(target_variable, "student_id"))
+print(predictor_variables)
+
+
+set.seed(123)
+trainIndex <- createDataPartition(df_augmented$Exam_Score, p = 0.8, list = FALSE)
+train_data <- df_augmented[trainIndex, ]
+test_data <- df_augmented[-trainIndex, ]
+```
+
+
+### Regresión Lineal
+
+En este caso, con caret, podemos probar a optimizar la regresión lineal con 'glmet', que permite la regularización con Lasso (L1) y Ridge (L2):
+
+```{r}
+
+set.seed(123)
+lm_model <- train(
+  Exam_Score ~ ., data = train_data,
+  method = "glmnet",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = expand.grid(
+    alpha = c(0, 0.5, 1),  # Ridge (0), Elastic Net (0.5), Lasso (1)
+    lambda = seq(0, 0.1, length = 10) # Probar valores de lambda
+  )
+)
+
+lm_pred <- predict(lm_model, newdata = test_data)
+r2_lm <- R2(lm_pred, test_data$Exam_Score)
+
+# Guardar el modelo de Regresión Lineal
+save(lm_model, file = "best_model_lm.RData")
+
+```
+
+
+### Evaluación del modelo
+
+```{r}
+
+# MSE y RMSE
+mse_lm <- mean((lm_pred - test_data$Exam_Score)^2)
+rmse_lm <- sqrt(mse_lm)
+cat("MSE:", mse_lm, "\n")
+cat("RMSE:", rmse_lm, "\n")
+
+# MAE
+mae_lm <- mean(abs(lm_pred - test_data$Exam_Score))
+cat("MAE:", mae_lm, "\n")
+
+# R2
+cat("R2:", r2_lm, "\n")
+
+# Comparación de predicciones vs valores reales
+library(ggplot2)
+
+ggplot(data = data.frame(Real = test_data$Exam_Score, Predicho = lm_pred), aes(x = Real, y = Predicho)) +
+  geom_point(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") + 
+  labs(title = "Comparación: Valores Reales vs. Predicciones",
+       x = "Valores Reales",
+       y = "Predicciones") +
+  theme_minimal()
+
+# Distribución de Errores
+error <- lm_pred - test_data$Exam_Score
+
+ggplot(data.frame(error = error), aes(x = error)) +
+  geom_histogram(binwidth = 1, fill = "blue", alpha = 0.6) +
+  labs(title = "Distribución de los Errores",
+       x = "Error (Predicción - Real)",
+       y = "Frecuencia") +
+  theme_minimal()
+
+
+```
+
+
+Finalmente, esta tabla muestra, después de muchas combinaciones, los cambios que mejor han funcionado en el modelo elegido en la pregunta anterior:
+
+
+| Hiperparámetro                                        | Antes | Ahora | 
+|-----------------------------------------------|--------------|-----------------|
+| Ruido                                | 0.1       | 0.005      | 
+| Regresión                           | Lineal Simple       | Ridge y Lasso      | 
+
+
+Los gráficos y las métricas obtenidas muestran cómo la ligera variación en la desviación estándar del ruido en Data Augmentation ha impactado en el rendimiento del modelo de regresión lineal.
+
+
+| Desviación estándar antes   |  Desviación estándar con Data Augmentation| 
+|-----------------------------------------------|--------------|
+| 3.912884                                | 3.913056       |  
+
+A simple vista, la diferencia en la desviación estándar parece mínima, pero ha generado una mejora en R² de 0.7504 → 0.7580.
+
+Si no se aplicara Data Augmentation, el resultado de R² disminuiría significativamente, como ocurrió en pruebas anteriores.
+
+
+Respecto a los gráficos, la mayoría de los errores están concentrados cerca de 0, lo cual indica que el modelo hace buenas predicciones.
+La distribución de errores es asimétrica, lo que indica que aún hay cierta subestimación para valores altos de "Exam_Score".
+
+
+En este punto del análisis, se ha conseguido obtener un modelo cuyo r2 es de 0.7580, lo que ya se empieza a considerar un modelo fiable (con margen de mejora).
+
+Pero, una vez que tenemos un modelo que funciona, nos surge la siguiente pregunta:
+
+## ¿Como podríamos llevar al uso estos modelos en la vida real?¿Qué aplicación realista podría tener este análisis?
+
+Solemos terminar los análisis proporcionando los resultados que hemos obtenido en los modelos, pero durante este proyecto, se ha querido finalizar dando un enfoque realista.
+
+Para entender mejor este resultado, el enfoque sería el siguiente:
+
+En todos los colegios existe un departamento orientativo, en el que además de las calificaciones de los alumnos, de las que se preocupan los profesores, se tienen en cuenta otros aspectos importantes en la vida del alumno, por ejemplo, ¿Realiza el alumno actividades extraescolares?¿Los padres se involucran lo suficiente con el alumno? o incluso ¿La influencia social le beneficia o le perjudica?.
+
+Para seguir con el supuesto, imaginando que nuestros alumnos son de segundo de bachillerato, año en el que se realiza selectividad y la calificación ha de ser la más alta posible, ¿Ayudaría al departamento orientativo tener un cuestionario que predijera la calificación final que obtendrá el alumno? 
+
+EL objetivo es entonces, que el alumno, con supervisión orientativa, responda a un a especie de cuestionario, en el que el resultado de la calificación final se mostrará al psicólogo del colegio. Junto con el estudio del árbol de decisión generado en 'global.rmd' podría llevarse a cabo un programa especial para ayudar a cada alumno en la "variable" que lo requiera. 
+
+Para llevarlo a cabo, se ha creado un dashboard, con la idea de que el alumno lo complete (siempre con supervisión orientativa):
+
+
+
+### Formulario 
+
+```{r}
+library(shiny)
+
+# Se carga el modelo y los datos
+load("best_model_lm.RData")
+
+# Definición de etiquetas amigables y leyendas
+friendly_labels <- list(
+   Previous_Scores = list(
+    label = "¿Qué Calificación obtuvo en el anterior examen?",
+    legend = "Debe contestar a esta pregunta en forma de porcentaje: 0% = un 0, 100% = un 10."
+  ),
+  Attendance = list(
+    label = "¿A qué porcentaje de clases asiste el alumno?",
+    legend = "Debe contestar a esta pregunta en forma de porcentaje: 0% = no asiste a clase, 100% = asiste a todas las clases."
+  ),
+  Distance_from_Home = list(
+    label = "¿Cuál es la distancia del alumno al centro educativo?",
+    legend = "0 = Cerca, 3 = Lejos"
+  ),
+  Hours_Studied = list(
+    label = "¿Cuántas horas estudia el alumno a la semana?",
+    legend = "Ingrese la cantidad de horas dedicadas al estudio semanalmente."
+  ),
+  Access_to_Resources = list(
+    label = "Disponibilidad de recursos educativos",
+    legend = "0 = No tengo acceso a recursos, 100 = Tengo acceso a todos los recursos."
+  ),
+  Extracurricular_Activities = list(
+    label = "Participación en Actividades extraescolares",
+    legend = "0 = No participo, 100 = Si participo"
+  ),
+  School_Type_Private = list(
+    label = "¿Asiste a un colegio privado?",
+    legend = "0 = No, 1 = Si"
+  ),
+  School_Type_Public = list(
+    label = "¿Asiste a un colegio público?",
+    legend = "0 = No, 1 = Si"
+  ),
+  Gender_Male = list(
+    label = "¿Se considera de género masculino?",
+    legend = "0 = No, 1 = Si"
+  ),
+  Gender_Female = list(
+    label = "¿Se considera de género femenino?",
+    legend = "0 = No, 1 = Si"
+  ),
+  Sleep_Hours = list(
+    label = "¿Cuántas horas suele dormir el alumno?",
+    legend = "Responda entre 4 y 10 horas"
+  ),
+  Internet_Access = list(
+    label = "¿Dispone de Acceso a Internet?",
+    legend = "0 = no, 1 = si"
+  ),
+  Tutoring_Sessions = list(
+    label = "¿A cuántas tutorías asiste al mes?",
+    legend = "Responda entre 0 y 8"
+  ),
+  study_sleep_ratio = list(
+    label = "¿Consideras que las horas de sueño y las horas de estudio están relacionadas?",
+    legend = "Valores mayores a 0 indican más estudio en relación con el sueño"
+  ),
+  motivated_study = list(
+    label = "¿Consideras que las horas de estudio están relacionadas con tu nivel de motivación?",
+    legend = "A más valor, más relación entre motivación y estudio"
+  ),
+  parent_peer_influence = list(
+    label = "¿Consideras que la influencia de tus padres y amigos influye en tu rendimiento?",
+    legend = "A más valor, más relación entre ambos factores"
+  ),
+  distance_category = list(
+    label = "Clasifica la distancia desde la casa a la escuela en grupos según percentiles",
+    legend = "Escoja una opción."
+  ),
+  study_group = list(
+    label = "¿A qué grupo pertenecería en relación a su estudio?",
+    legend = "Bajo = estudia poco, Medio = normal, Alto = estudia mucho"
+  ),
+  high_access_to_resources = list(
+    label = "Indica si un estudiante tiene acceso a recursos educativos por encima del promedio",
+    legend = "1 = si, por encima de la media,0 = no, por debajo de la media"
+  ),
+  social_influence = list(
+    label = "Combinación del impacto de los compañeros, la participación de los padres y la calidad docente",
+    legend = "Valores más altos indican mayor influencia social en el aprendizaje"
+  ),
+  Learning_Disabilities = list(
+    label = "¿Presenta dificultades de aprendizaje?",
+    legend = "0 = No presenta, 1 = Presenta alguna Dificultad"
+  ),
+  Parental_Education_Level = list(
+    label = "Nivel educativo mas alto de los padres",
+    legend = "1 = High School, 2 = College, 3 = Postgraduate"
+  ),
+  Family_Income = list(
+    label = "Nivel de Ingresos Familiares",
+    legend = "0 = Ingresos Bajos, 3 = Ingresos altos"
+  ),
+  Teacher_Quality = list(
+    label = "¿Como puntuaría la calidad del profesorado?",
+    legend = "0 = Baja Calidad, 3 = Calidad Alta"
+  ),
+  Peer_Influence = list(
+    label = "Influencia de los compañeros",
+    legend = "1 = Negativa, 3 = Positiva "
+  ),
+  Physical_Activity = list(
+    label = "Número medio de horas de actividad física a la semana",
+    legend = "Responda entre 0 y 6 horas"
+  ),
+  Motivation_Level = list(
+    label = "¿Cuál es el nivel de motivación del alumno?",
+    legend = "Debe ingresar un valor entre 1 (baja motivación) y 10 (alta motivación)."
+  ),
+  Parental_Involvement = list(
+    label = "¿Cuánto se involucran los padres en la educación del alumno?",
+    legend = "Ingrese un valor entre 1 (bajo) y 10 (alto)."
+  ),
+  Gender = list(
+    label = "¿Cuál es el género del alumno?",
+    legend = "Seleccione Female para femenino o Male para masculino."
+  ),
+  School_Type = list(
+    label = "¿A qué tipo de escuela asiste el alumno?",
+    legend = "Seleccione Public para escuela pública o Private para escuela privada."
+  )
+)
+
+# Variables que se tratarán como factores
+factor_vars <- c("distance_category", "study_group", "high_access_to_resources", "Gender", "School_Type")
+
+# UI - Interfaz de Usuario
+ui <- fluidPage(
+  titlePanel("Predicción de Nota en el Examen"),
+  sidebarLayout(
+    sidebarPanel(
+      h4("Ingrese sus datos en formato formulario"),
+      uiOutput("questionUI"),
+      uiOutput("actionButtonUI")
+    ),
+    mainPanel(
+      h3("Predicción de su Nota"),
+      verbatimTextOutput("predicted_score")
+    )
+  )
+)
+
+# Server - Lógica del Dashboard
+server <- function(input, output, session) {
+  current_question <- reactiveVal(1)
+  responses <- reactiveValues()
+  final_result <- reactiveVal(NULL)
+
+  output$questionUI <- renderUI({
+    idx <- current_question()
+    if (idx <= length(predictor_variables)) {
+      var <- predictor_variables[idx]
+      label_text <- if (!is.null(friendly_labels[[var]])) friendly_labels[[var]]$label else var
+      legend_text <- if (!is.null(friendly_labels[[var]])) friendly_labels[[var]]$legend else ""
+      
+      input_ui <- if (var %in% factor_vars) {
+        selectInput(inputId = var, label = label_text, choices = unique(df_augmented[[var]]))
+      } else {
+        min_val <- min(df_augmented[[var]], na.rm = TRUE)
+        max_val <- max(df_augmented[[var]], na.rm = TRUE)
+        mean_val <- round(mean(df_augmented[[var]], na.rm = TRUE), 2)
+        sliderInput(inputId = var, label = label_text, min = min_val, max = max_val, value = mean_val)
+      }
+      
+      tagList(
+        input_ui,
+        helpText(legend_text)
+      )
+    } else {
+      h4("Ha respondido todas las preguntas.")
+    }
+  })
+
+  output$actionButtonUI <- renderUI({
+    idx <- current_question()
+    if (idx <= length(predictor_variables)) {
+      actionButton("nextOrPredict", ifelse(idx < length(predictor_variables), "Siguiente", "Predecir Nota"), class = "btn-primary")
+    } else {
+      actionButton("reset", "Reiniciar", class = "btn-secondary")
+    }
+  })
+
+  observeEvent(input$nextOrPredict, {
+    idx <- current_question()
+    if (idx <= length(predictor_variables)) {
+      var <- predictor_variables[idx]
+      if (var %in% factor_vars) {
+        responses[[var]] <- as.factor(input[[var]])
+      } else {
+        responses[[var]] <- as.numeric(input[[var]])
+      }
+      if (idx < length(predictor_variables)) {
+        current_question(idx + 1)
+      } else {
+        input_list <- lapply(predictor_variables, function(v) { responses[[v]] })
+        names(input_list) <- predictor_variables
+        input_data <- as.data.frame(input_list, stringsAsFactors = FALSE)
+        for (v in factor_vars) {
+          if (v %in% names(input_data)) {
+            input_data[[v]] <- as.factor(input_data[[v]])
+          }
+        }
+        pred <- predict(lm_model, newdata = input_data)
+        final_result(round(pred, 2))
+        current_question(idx + 1)
+      }
+    }
+  })
+
+  observeEvent(input$reset, {
+    current_question(1)
+    for (v in predictor_variables) {
+      responses[[v]] <- NULL
+    }
+    final_result(NULL)
+  })
+
+  output$predicted_score <- renderText({
+    res <- final_result()
+    if (!is.null(res)) {
+      paste("Su nota estimada en el próximo examen es:", res)
+    } else {
+      ""
+    }
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+
+De esta forma, si al alumno, que hará selectividad ese mismo año, se le predice una mala calificación, puede comenzarse a estudiar su caso más a fondo y así intentar mejorarla. Además, esta herramienta permite ser usada durante todo el año, permitiendo hacer un estudio, por ejemplo, cada vez que el alumno haga un nuevo examen.
+
+
+## Conclusiones y Trabajo Futuro
+
+Este estudio ha demostrado que la regresión lineal, combinada con data augmentation y feature engineering, ha sido el modelo más efectivo para predecir el rendimiento académico de los estudiantes, alcanzando un R² de 0.7580. Más allá del análisis técnico, uno de los mayores logros ha sido convertir estos modelos en una herramienta aplicable a la vida real, mediante el desarrollo de un dashboard interactivo que permite a orientadores y estudiantes obtener predicciones personalizadas y tomar decisiones informadas para mejorar el desempeño académico.
+
+Sin embargo, el costo computacional limitó la exploración de modelos más complejos. Como trabajo futuro, se propone utilizar infraestructura más potente para evaluar técnicas avanzadas y mejorar aún más la precisión del modelo. Además, se trabajará en optimizar el dashboard, haciéndolo más profesional, intuitivo y con mejor integración de datos en tiempo real.
+
+En definitiva, este proyecto no solo ha demostrado la viabilidad del uso de machine learning en educación, sino que ha dado un paso hacia su implementación práctica, ofreciendo una herramienta útil con potencial para impactar positivamente en el entorno educativo.
+
+
+
+
+
+
+
+
+
+
+
+
 
